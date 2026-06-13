@@ -19,12 +19,32 @@ function staleDays(lastRead: string | null) {
   return dayjs().diff(dayjs(lastRead), 'day')
 }
 
+function parseCSV(text: string): Record<string, string>[] {
+  const lines = text.trim().split('\n').filter(l => l.trim())
+  if (lines.length < 2) return []
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''))
+  return lines.slice(1).map(line => {
+    // 简单 CSV 解析（支持带引号的字段）
+    const vals: string[] = []
+    let cur = '', inQ = false
+    for (const ch of line) {
+      if (ch === '"') { inQ = !inQ }
+      else if (ch === ',' && !inQ) { vals.push(cur.trim()); cur = '' }
+      else cur += ch
+    }
+    vals.push(cur.trim())
+    return Object.fromEntries(headers.map((h, i) => [h, (vals[i] ?? '').replace(/^"|"$/g, '')]))
+  })
+}
+
 export default function Books() {
   const [books, setBooks] = useState<any[]>([])
   const [tab, setTab] = useState('全部')
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [form, setForm] = useState({ title: '', status: '想读', rating: '', notes: '', tags: '', finish_date: '' })
+  const [importing, setImporting] = useState(false)
+  const [importResult, setImportResult] = useState<string | null>(null)
 
   const load = async () => {
     const status = tab === '全部' ? undefined : tab
@@ -52,14 +72,73 @@ export default function Books() {
     await deleteBook(id); load()
   }
 
+  const downloadTemplate = () => {
+    const csv = '书名,状态,评分,标签,读完日期,心得\n三体,读完,5,"科幻,中国",2024-01-15,刘慈欣的史诗巨作\n活着,想读,,,,'
+    const a = document.createElement('a')
+    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv)
+    a.download = '书籍导入模板.csv'
+    a.click()
+  }
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImporting(true); setImportResult(null)
+    const text = await file.text()
+    const rows = parseCSV(text)
+    let ok = 0, fail = 0
+    for (const row of rows) {
+      const title = row['书名']?.trim()
+      if (!title) { fail++; continue }
+      const status = ['想读','在读','读完'].includes(row['状态']) ? row['状态'] : '想读'
+      const rating = Number(row['评分']) || null
+      try {
+        await createBook({
+          title,
+          status,
+          rating: rating && rating >= 1 && rating <= 5 ? rating : null,
+          tags: row['标签']?.trim() || null,
+          finish_date: row['读完日期']?.trim() || null,
+          notes: row['心得']?.trim() || null,
+        })
+        ok++
+      } catch { fail++ }
+    }
+    setImporting(false)
+    setImportResult(`导入完成：成功 ${ok} 条${fail ? `，失败 ${fail} 条` : ''}`)
+    e.target.value = ''
+    load()
+  }
+
   const displayed = tab === '全部' ? books : books.filter(b => b.status === tab)
 
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div style={{ fontSize: 22, fontWeight: 700 }}>📚 读书</div>
-        <Button onClick={openNew}>+ 新增书籍</Button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button onClick={downloadTemplate} style={{
+            padding: '8px 14px', borderRadius: 8, border: '1.5px solid #e4dff0',
+            background: '#f5f3fa', fontSize: 13, cursor: 'pointer', color: '#777',
+          }}>⬇ 下载导入模板</button>
+          <label style={{
+            padding: '8px 14px', borderRadius: 8, border: '1.5px solid #e4dff0',
+            background: '#f5f3fa', fontSize: 13, cursor: importing ? 'not-allowed' : 'pointer', color: importing ? '#bbb' : '#555',
+            fontWeight: 500,
+          }}>
+            {importing ? '导入中…' : '📥 导入 CSV'}
+            <input type="file" accept=".csv" onChange={handleImport} style={{ display: 'none' }} disabled={importing} />
+          </label>
+          <Button onClick={openNew}>+ 新增书籍</Button>
+        </div>
       </div>
+
+      {importResult && (
+        <div style={{ marginBottom: 14, padding: '10px 16px', background: '#f0faf4', border: '1px solid #b2dfdb', borderRadius: 8, fontSize: 13, color: '#2e7d52', display: 'flex', justifyContent: 'space-between' }}>
+          {importResult}
+          <span onClick={() => setImportResult(null)} style={{ cursor: 'pointer', color: '#999' }}>×</span>
+        </div>
+      )}
 
       {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: '2px solid #e4dff0', marginBottom: 18 }}>
