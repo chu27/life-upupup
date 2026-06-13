@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
-from datetime import date
+from datetime import date, datetime
 
 from database import get_db
 from models.tasks import DailyTask
@@ -38,7 +38,7 @@ def create_task(task: TaskCreate, db: Session = Depends(get_db)):
         title=task.title,
         period=task.period,
         module_tag=task.module_tag,
-        date=task.date_key,
+        date=datetime.strptime(task.date_key, '%Y-%m-%d').date(),
     )
     db.add(db_task)
     db.commit()
