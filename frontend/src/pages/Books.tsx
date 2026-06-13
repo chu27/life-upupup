@@ -53,10 +53,11 @@ export default function Books() {
 
   useEffect(() => { load() }, [tab])
 
+  const today = dayjs().format('YYYY-MM-DD')
   const openNew = () => { setEditing(null); setForm({ title: '', status: '想读', rating: '', notes: '', tags: '', finish_date: '' }); setShowModal(true) }
   const openEdit = (b: any) => {
     setEditing(b)
-    setForm({ title: b.title, status: b.status, rating: b.rating ?? '', notes: b.notes ?? '', tags: b.tags ?? '', finish_date: b.finish_date ?? '' })
+    setForm({ title: b.title, status: b.status, rating: b.rating ?? '', notes: b.notes ?? '', tags: b.tags ?? '', finish_date: b.finish_date ?? (b.status === '读完' ? today : '') })
     setShowModal(true)
   }
 
@@ -199,7 +200,11 @@ export default function Books() {
         <Modal title={editing ? '编辑书籍' : '新增书籍'} onClose={() => setShowModal(false)}>
           <FormRow label="书名 *"><Input value={form.title} onChange={v => setForm(f => ({ ...f, title: v }))} placeholder="书名" /></FormRow>
           <FormRow label="阅读状态">
-            <Select value={form.status} onChange={v => setForm(f => ({ ...f, status: v }))} options={['想读','在读','读完'].map(s => ({ label: s, value: s }))} />
+            <Select value={form.status} onChange={v => setForm(f => ({
+              ...f,
+              status: v,
+              finish_date: v === '读完' && !f.finish_date ? dayjs().format('YYYY-MM-DD') : f.finish_date,
+            }))} options={['想读','在读','读完'].map(s => ({ label: s, value: s }))} />
           </FormRow>
           <FormRow label="评分（1-5）">
             <Select value={String(form.rating)} onChange={v => setForm(f => ({ ...f, rating: v }))} options={[{ label: '—', value: '' }, ...['1','2','3','4','5'].map(s => ({ label: '★'.repeat(+s), value: s }))]} />
