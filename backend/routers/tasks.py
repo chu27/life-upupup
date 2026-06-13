@@ -12,7 +12,8 @@ router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
 class TaskCreate(BaseModel):
     title: str
-    period: str  # today / week / month / year
+    period: str      # today / week / month / year
+    date_key: str    # YYYY-MM-DD anchor (day / week-monday / month-01 / year-01-01)
     module_tag: Optional[str] = None
 
 
@@ -22,8 +23,13 @@ class TaskUpdate(BaseModel):
 
 
 @router.get("")
-def list_tasks(period: str, db: Session = Depends(get_db)):
-    return db.query(DailyTask).filter(DailyTask.period == period).order_by(DailyTask.is_done, DailyTask.id).all()
+def list_tasks(period: str, date_key: str, db: Session = Depends(get_db)):
+    return (
+        db.query(DailyTask)
+        .filter(DailyTask.period == period, DailyTask.date == date_key)
+        .order_by(DailyTask.is_done, DailyTask.id)
+        .all()
+    )
 
 
 @router.post("")
@@ -32,7 +38,7 @@ def create_task(task: TaskCreate, db: Session = Depends(get_db)):
         title=task.title,
         period=task.period,
         module_tag=task.module_tag,
-        date=date.today(),
+        date=task.date_key,
     )
     db.add(db_task)
     db.commit()
@@ -71,8 +77,3 @@ def delete_task(task_id: int, db: Session = Depends(get_db)):
     db.delete(task)
     db.commit()
     return {"ok": True}
-
-
-@router.post("/ai-generate")
-def ai_generate_tasks(period: str):
-    return {"message": "AI 功能待实装", "available": False}
