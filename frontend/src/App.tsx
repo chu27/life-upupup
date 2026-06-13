@@ -16,7 +16,10 @@ export default function App() {
       <Layout>
         <Routes>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/tasks" element={<Tasks />} />
+          <Route path="/tasks/today" element={<Tasks period="today" />} />
+          <Route path="/tasks/week" element={<Tasks period="week" />} />
+          <Route path="/tasks/month" element={<Tasks period="month" />} />
+          <Route path="/tasks/year" element={<Tasks period="year" />} />
           <Route path="/books" element={<Books />} />
           <Route path="/documentaries" element={<Documentaries />} />
           <Route path="/body" element={<Body />} />

@@ -12,7 +12,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     getDashboard().then(setData)
-    getTasks(today).then(setTasks)
+    getTasks({ date: today }).then(setTasks)
   }, [today])
 
   const handleToggle = async (id: number) => {
@@ -46,7 +46,7 @@ export default function Dashboard() {
         <Card>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <span style={{ fontSize: 12, fontWeight: 600, color: '#888', textTransform: 'uppercase' }}>今日任务</span>
-            <span style={{ fontSize: 12, color: '#6c4fa3', cursor: 'pointer', fontWeight: 600 }} onClick={() => nav('/tasks')}>
+            <span style={{ fontSize: 12, color: '#6c4fa3', cursor: 'pointer', fontWeight: 600 }} onClick={() => nav('/tasks/today')}>
               查看全部 →
             </span>
           </div>

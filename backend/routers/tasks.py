@@ -17,12 +17,25 @@ class TaskCreate(BaseModel):
     module_tag: Optional[str] = None
 
 
+class TaskUpdate(BaseModel):
+    title: Optional[str] = None
+    module_tag: Optional[str] = None
+    date: Optional[date] = None
+
+
 @router.get("")
-def list_tasks(date: Optional[date] = None, db: Session = Depends(get_db)):
+def list_tasks(
+    date: Optional[date] = None,
+    start: Optional[date] = None,
+    end: Optional[date] = None,
+    db: Session = Depends(get_db)
+):
     q = db.query(DailyTask)
     if date:
         q = q.filter(DailyTask.date == date)
-    return q.order_by(DailyTask.is_done, DailyTask.id).all()
+    elif start and end:
+        q = q.filter(DailyTask.date >= start, DailyTask.date <= end)
+    return q.order_by(DailyTask.date, DailyTask.is_done, DailyTask.id).all()
 
 
 @router.post("")
@@ -32,6 +45,22 @@ def create_task(task: TaskCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_task)
     return db_task
+
+
+@router.put("/{task_id}")
+def update_task(task_id: int, data: TaskUpdate, db: Session = Depends(get_db)):
+    task = db.query(DailyTask).filter(DailyTask.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Not found")
+    if data.title is not None:
+        task.title = data.title
+    if data.module_tag is not None:
+        task.module_tag = data.module_tag
+    if data.date is not None:
+        task.date = data.date
+    db.commit()
+    db.refresh(task)
+    return task
 
 
 @router.put("/{task_id}/toggle")

@@ -68,7 +68,9 @@ export const getWater = (date: string) => api.get(`/diet/water/${date}`).then(r 
 export const addCup = (date: string) => api.post('/diet/water/add-cup', null, { params: { date } }).then(r => r.data)
 
 // ── Tasks ──────────────────────────────────────────────
-export const getTasks = (date?: string) => api.get('/tasks', { params: date ? { date } : {} }).then(r => r.data)
+export const getTasks = (params?: { date?: string; start?: string; end?: string }) =>
+  api.get('/tasks', { params }).then(r => r.data)
 export const createTask = (data: any) => api.post('/tasks', data).then(r => r.data)
+export const updateTask = (id: number, data: any) => api.put(`/tasks/${id}`, data).then(r => r.data)
 export const toggleTask = (id: number) => api.put(`/tasks/${id}/toggle`).then(r => r.data)
 export const deleteTask = (id: number) => api.delete(`/tasks/${id}`)

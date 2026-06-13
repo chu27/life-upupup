@@ -3,7 +3,12 @@ import { NavLink } from 'react-router-dom'
 const nav = [
   { group: '', items: [
     { to: '/', icon: '🏠', label: '首页' },
-    { to: '/tasks', icon: '✅', label: '任务' },
+  ]},
+  { group: '任务', items: [
+    { to: '/tasks/today', icon: '📅', label: '今日任务' },
+    { to: '/tasks/week', icon: '🗓️', label: '本周任务' },
+    { to: '/tasks/month', icon: '📆', label: '本月任务' },
+    { to: '/tasks/year', icon: '🗃️', label: '本年任务' },
   ]},
   { group: '阅读 & 观影', items: [
     { to: '/books', icon: '📚', label: '读书' },
