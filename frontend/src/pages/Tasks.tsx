@@ -48,12 +48,12 @@ export default function Tasks({ period }: { period: Period }) {
 
   const range = getRange(period)
 
-  const load = () => getTasks(range).then(setTasks)
+  const load = () => getTasks(period).then(setTasks)
   useEffect(() => { load() }, [period])
 
   const handleAdd = async () => {
     if (!newTitle.trim()) return
-    await createTask({ date: today, title: newTitle.trim(), module_tag: newTag || null })
+    await createTask({ period, title: newTitle.trim(), module_tag: newTag || null })
     setNewTitle(''); setNewTag(''); load()
   }
 

@@ -12,7 +12,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     getDashboard().then(setData)
-    getTasks({ date: today }).then(setTasks)
+    getTasks('today').then(setTasks)
   }, [today])
 
   const handleToggle = async (id: number) => {

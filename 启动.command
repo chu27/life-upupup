@@ -8,7 +8,7 @@ echo "🌿 启动个人生活管理平台..."
 # 启动后端
 cd backend
 source venv/bin/activate
-uvicorn main:app --host 0.0.0.0 --port 8000 &
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload &
 BACKEND_PID=$!
 cd ..
 

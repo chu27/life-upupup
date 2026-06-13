@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
 from pydantic import BaseModel
 from typing import Optional
 from datetime import date
@@ -12,35 +11,29 @@ router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
 
 class TaskCreate(BaseModel):
-    date: date
     title: str
+    period: str  # today / week / month / year
     module_tag: Optional[str] = None
 
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
     module_tag: Optional[str] = None
-    date: Optional[date] = None
 
 
 @router.get("")
-def list_tasks(
-    date: Optional[date] = None,
-    start: Optional[date] = None,
-    end: Optional[date] = None,
-    db: Session = Depends(get_db)
-):
-    q = db.query(DailyTask)
-    if date:
-        q = q.filter(DailyTask.date == date)
-    elif start and end:
-        q = q.filter(DailyTask.date >= start, DailyTask.date <= end)
-    return q.order_by(DailyTask.date, DailyTask.is_done, DailyTask.id).all()
+def list_tasks(period: str, db: Session = Depends(get_db)):
+    return db.query(DailyTask).filter(DailyTask.period == period).order_by(DailyTask.is_done, DailyTask.id).all()
 
 
 @router.post("")
 def create_task(task: TaskCreate, db: Session = Depends(get_db)):
-    db_task = DailyTask(**task.dict())
+    db_task = DailyTask(
+        title=task.title,
+        period=task.period,
+        module_tag=task.module_tag,
+        date=date.today(),
+    )
     db.add(db_task)
     db.commit()
     db.refresh(db_task)
@@ -80,7 +73,6 @@ def delete_task(task_id: int, db: Session = Depends(get_db)):
     return {"ok": True}
 
 
-# AI 占位接口
 @router.post("/ai-generate")
-def ai_generate_tasks(date: date):
+def ai_generate_tasks(period: str):
     return {"message": "AI 功能待实装", "available": False}
