@@ -1,19 +1,61 @@
 import { useEffect, useState } from 'react'
 import dayjs from 'dayjs'
+import isoWeek from 'dayjs/plugin/isoWeek'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import { getTasks, createTask, toggleTask, deleteTask } from '../api'
 
+dayjs.extend(isoWeek)
+
 const MODULE_TAGS = ['📚 读书', '🎬 纪录片', '⚖️ 身材', '🥗 饮食', '💰 理财', '📈 股票', '🇯🇵 日语', '🇬🇧 英语', '💧 饮水']
+
+type Tab = 'today' | 'week' | 'month'
+
+function getDateRange(tab: Tab): { start: string; end: string; label: string } {
+  const today = dayjs()
+  if (tab === 'today') {
+    const d = today.format('YYYY-MM-DD')
+    return { start: d, end: d, label: today.format('YYYY年M月D日') }
+  }
+  if (tab === 'week') {
+    const start = today.startOf('isoWeek').format('YYYY-MM-DD')
+    const end = today.endOf('isoWeek').format('YYYY-MM-DD')
+    return { start, end, label: `${dayjs(start).format('M月D日')} — ${dayjs(end).format('M月D日')}` }
+  }
+  const start = today.startOf('month').format('YYYY-MM-DD')
+  const end = today.endOf('month').format('YYYY-MM-DD')
+  return { start, end, label: today.format('YYYY年M月') }
+}
 
 export default function Tasks() {
   const today = dayjs().format('YYYY-MM-DD')
+  const [tab, setTab] = useState<Tab>('today')
   const [tasks, setTasks] = useState<any[]>([])
   const [newTitle, setNewTitle] = useState('')
   const [newTag, setNewTag] = useState('')
 
-  const load = () => getTasks(today).then(setTasks)
-  useEffect(() => { load() }, [])
+  const { start, end, label } = getDateRange(tab)
+
+  const load = async () => {
+    if (tab === 'today') {
+      const data = await getTasks(today)
+      setTasks(data)
+    } else {
+      const days: string[] = []
+      let cur = dayjs(start)
+      const endDay = dayjs(end)
+      while (!cur.isAfter(endDay)) {
+        days.push(cur.format('YYYY-MM-DD'))
+        cur = cur.add(1, 'day')
+      }
+      const results = await Promise.all(days.map(d => getTasks(d)))
+      const all = results.flat()
+      const seen = new Set<number>()
+      setTasks(all.filter(t => { if (seen.has(t.id)) return false; seen.add(t.id); return true }))
+    }
+  }
+
+  useEffect(() => { load() }, [tab])
 
   const handleToggle = async (id: number) => {
     const updated = await toggleTask(id)
@@ -32,51 +74,73 @@ export default function Tasks() {
 
   const done = tasks.filter(t => t.is_done).length
 
+  const tabDefs: { key: Tab; label: string }[] = [
+    { key: 'today', label: '今日任务' },
+    { key: 'week', label: '本周任务' },
+    { key: 'month', label: '本月任务' },
+  ]
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
-          <div style={{ fontSize: 22, fontWeight: 700 }}>✅ 今日任务</div>
-          <div style={{ fontSize: 13, color: '#999', marginTop: 2 }}>{dayjs().format('YYYY年M月D日')}</div>
+          <div style={{ fontSize: 22, fontWeight: 700 }}>✅ 任务</div>
+          <div style={{ fontSize: 13, color: '#999', marginTop: 2 }}>{label}</div>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {/* AI 占位按钮 */}
-          <button style={{
-            display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
-            background: '#f5f3fa', border: '1.5px solid #e4dff0', borderRadius: 8,
-            fontSize: 13, fontWeight: 600, cursor: 'not-allowed', color: '#aaa',
-          }} title="Claude API 功能待实装">
-            🤖 AI 生成任务
-          </button>
-        </div>
+        <button style={{
+          display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
+          background: '#f5f3fa', border: '1.5px solid #e4dff0', borderRadius: 8,
+          fontSize: 13, fontWeight: 600, cursor: 'not-allowed', color: '#aaa',
+        }} title="Claude API 功能待实装">
+          🤖 AI 生成任务
+        </button>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
+        {tabDefs.map(t => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            style={{
+              padding: '7px 18px', borderRadius: 8, border: 'none', cursor: 'pointer',
+              fontSize: 13, fontWeight: tab === t.key ? 700 : 400,
+              background: tab === t.key ? '#6c4fa3' : '#f5f3fa',
+              color: tab === t.key ? '#fff' : '#555',
+              transition: 'all .15s',
+            }}
+          >{t.label}</button>
+        ))}
       </div>
 
       <Card>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <span style={{ fontSize: 13, color: '#555' }}>今日完成进度</span>
+          <span style={{ fontSize: 13, color: '#555' }}>
+            {tab === 'today' ? '今日完成进度' : tab === 'week' ? '本周完成进度' : '本月完成进度'}
+          </span>
           <span style={{ fontSize: 13, fontWeight: 700, color: '#6c4fa3' }}>{done} / {tasks.length} 完成</span>
         </div>
         <div style={{ background: '#eee', borderRadius: 99, height: 6, marginBottom: 20 }}>
           <div style={{ background: '#6c4fa3', height: 6, borderRadius: 99, width: tasks.length ? `${(done / tasks.length) * 100}%` : '0%', transition: 'width .3s' }} />
         </div>
 
-        {/* Add task */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-          <input
-            value={newTitle} onChange={e => setNewTitle(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleAdd()}
-            placeholder="添加新任务…"
-            style={{ flex: 1, padding: '8px 12px', border: '1.5px solid #e4dff0', borderRadius: 8, fontSize: 13, background: '#f5f3fa', outline: 'none' }}
-          />
-          <select value={newTag} onChange={e => setNewTag(e.target.value)}
-            style={{ padding: '8px 10px', border: '1.5px solid #e4dff0', borderRadius: 8, fontSize: 12, background: '#f5f3fa', outline: 'none' }}>
-            <option value="">模块标签</option>
-            {MODULE_TAGS.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
-          <Button onClick={handleAdd} size="md">+ 添加</Button>
-        </div>
+        {tab === 'today' && (
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+            <input
+              value={newTitle} onChange={e => setNewTitle(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleAdd()}
+              placeholder="添加新任务…"
+              style={{ flex: 1, padding: '8px 12px', border: '1.5px solid #e4dff0', borderRadius: 8, fontSize: 13, background: '#f5f3fa', outline: 'none' }}
+            />
+            <select value={newTag} onChange={e => setNewTag(e.target.value)}
+              style={{ padding: '8px 10px', border: '1.5px solid #e4dff0', borderRadius: 8, fontSize: 12, background: '#f5f3fa', outline: 'none' }}>
+              <option value="">模块标签</option>
+              {MODULE_TAGS.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <Button onClick={handleAdd} size="md">+ 添加</Button>
+          </div>
+        )}
 
-        {/* Task list */}
         {tasks.map(t => (
           <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 0', borderBottom: '1px solid #f0f0f0' }}>
             <div onClick={() => handleToggle(t.id)} style={{
@@ -88,6 +152,9 @@ export default function Tasks() {
             <span style={{ flex: 1, fontSize: 14, textDecoration: t.is_done ? 'line-through' : 'none', color: t.is_done ? '#aaa' : '#1b1b1b' }}>
               {t.title}
             </span>
+            {(tab === 'week' || tab === 'month') && (
+              <span style={{ fontSize: 11, color: '#bbb' }}>{dayjs(t.date).format('M/D')}</span>
+            )}
             {t.module_tag && (
               <span style={{ fontSize: 11, padding: '2px 8px', background: '#ede8f7', color: '#6c4fa3', borderRadius: 20 }}>{t.module_tag}</span>
             )}
@@ -97,13 +164,13 @@ export default function Tasks() {
 
         {tasks.length === 0 && (
           <div style={{ textAlign: 'center', padding: '40px 0', color: '#aaa', fontSize: 13 }}>
-            今天还没有任务，在上方输入框添加，或使用 AI 生成
+            {tab === 'today' ? '今天还没有任务，在上方输入框添加，或使用 AI 生成' : '暂无任务'}
           </div>
         )}
 
         {done === tasks.length && tasks.length > 0 && (
           <div style={{ textAlign: 'center', padding: '16px 0', fontSize: 14, color: '#6c4fa3', fontWeight: 600 }}>
-            🎉 今日任务全部完成！
+            🎉 {tab === 'today' ? '今日任务全部完成！' : tab === 'week' ? '本周任务全部完成！' : '本月任务全部完成！'}
           </div>
         )}
       </Card>

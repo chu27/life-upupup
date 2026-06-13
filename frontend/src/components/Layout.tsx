@@ -1,9 +1,9 @@
 import { NavLink } from 'react-router-dom'
 
 const nav = [
-  { group: '总览', items: [
-    { to: '/', icon: '🏠', label: '首页仪表盘' },
-    { to: '/tasks', icon: '✅', label: '今日任务' },
+  { group: '', items: [
+    { to: '/', icon: '🏠', label: '首页' },
+    { to: '/tasks', icon: '✅', label: '任务' },
   ]},
   { group: '阅读 & 观影', items: [
     { to: '/books', icon: '📚', label: '读书' },
@@ -37,10 +37,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
         <nav style={{ flex: 1 }}>
           {nav.map(group => (
-            <div key={group.group} style={{ padding: '12px 0 4px' }}>
-              <div style={{ fontSize: 10, color: '#999', padding: '0 16px 4px', textTransform: 'uppercase', letterSpacing: '.5px' }}>
-                {group.group}
-              </div>
+            <div key={group.group || '_top'} style={{ padding: '12px 0 4px' }}>
+              {group.group && (
+                <div style={{ fontSize: 10, color: '#999', padding: '0 16px 4px', textTransform: 'uppercase', letterSpacing: '.5px' }}>
+                  {group.group}
+                </div>
+              )}
               {group.items.map(item => (
                 <NavLink
                   key={item.to}

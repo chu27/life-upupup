@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
 import Tasks from './pages/Tasks'
@@ -25,6 +25,7 @@ export default function App() {
           <Route path="/stock" element={<Stock />} />
           <Route path="/japanese" element={<Language lang="japanese" />} />
           <Route path="/english" element={<Language lang="english" />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Layout>
     </BrowserRouter>
