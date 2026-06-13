@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: #f5f3fa;
+  font-family: -apple-system, 'Hiragino Sans', 'PingFang SC', sans-serif;
+  color: #1b1b1b;
+}
+
+#root { height: 100vh; display: flex; }
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d4c9f0; border-radius: 3px; }

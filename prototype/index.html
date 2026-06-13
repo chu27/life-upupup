@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>个人生活自我管理平台 — 原型</title>
+<style>
+  :root {
+    --bg: #f5f3fa;
+    --card: #ffffff;
+    --primary: #6c4fa3;
+    --primary-light: #a07fd4;
+    --primary-pale: #ede8f7;
+    --accent: #f4a261;
+    --danger: #e63946;
+    --warn: #f4a261;
+    --text: #1b1b1b;
+    --text-2: #555;
+    --text-3: #999;
+    --border: #e4dff0;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(108,79,163,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, 'Hiragino Sans', 'PingFang SC', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* Layout */
+  .app { display: flex; height: 100vh; overflow: hidden; }
+  .sidebar { width: 220px; background: var(--card); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; overflow-y: auto; }
+  .main { flex: 1; overflow-y: auto; }
+
+  /* Sidebar */
+  .sidebar-logo { padding: 20px 20px 16px; font-size: 15px; font-weight: 700; color: var(--primary); border-bottom: 1px solid var(--border); }
+  .sidebar-logo span { font-size: 11px; font-weight: 400; color: var(--text-3); display: block; margin-top: 2px; }
+  .nav-group { padding: 12px 0 4px; }
+  .nav-label { font-size: 10px; color: var(--text-3); padding: 0 16px 4px; letter-spacing: .5px; text-transform: uppercase; }
+  .nav-item { display: flex; align-items: center; gap: 8px; padding: 9px 16px; cursor: pointer; font-size: 13.5px; color: var(--text-2); border-radius: 0; transition: background .15s; }
+  .nav-item:hover { background: var(--bg); color: var(--text); }
+  .nav-item.active { background: var(--primary-pale); color: var(--primary); font-weight: 600; }
+  .nav-icon { width: 18px; text-align: center; font-size: 15px; }
+
+  /* Page */
+  .page { display: none; padding: 28px 32px; }
+  .page.active { display: block; }
+  .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+  .page-title { font-size: 22px; font-weight: 700; }
+  .page-subtitle { font-size: 13px; color: var(--text-3); margin-top: 2px; }
+
+  /* Cards */
+  .card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; margin-bottom: 16px; }
+  .card-title { font-size: 13px; font-weight: 600; color: var(--text-2); margin-bottom: 14px; text-transform: uppercase; letter-spacing: .4px; }
+
+  /* Grid */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+
+  /* Stat card */
+  .stat-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px 20px; }
+  .stat-label { font-size: 12px; color: var(--text-3); margin-bottom: 6px; }
+  .stat-value { font-size: 26px; font-weight: 700; color: var(--primary); }
+  .stat-unit { font-size: 13px; color: var(--text-3); margin-left: 3px; }
+  .stat-sub { font-size: 11px; color: var(--text-3); margin-top: 4px; }
+
+  /* Button */
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: opacity .15s; }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text-2); }
+  .btn-sm { padding: 5px 12px; font-size: 12px; }
+  .btn:hover { opacity: .85; }
+
+  /* Badge */
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .badge-green { background: var(--primary-pale); color: var(--primary); }
+  .badge-orange { background: #fff3e0; color: #e65100; }
+  .badge-blue { background: #e3f2fd; color: #1565c0; }
+  .badge-gray { background: #f0f0f0; color: var(--text-3); }
+  .badge-red { background: #fdecea; color: var(--danger); }
+
+  /* Table */
+  .table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .table th { text-align: left; padding: 10px 12px; font-size: 11px; color: var(--text-3); border-bottom: 1px solid var(--border); font-weight: 600; text-transform: uppercase; }
+  .table td { padding: 12px 12px; border-bottom: 1px solid var(--border); color: var(--text); }
+  .table tr:last-child td { border-bottom: none; }
+  .table tr:hover td { background: var(--bg); }
+
+  /* Stars */
+  .stars { color: var(--accent); letter-spacing: 1px; font-size: 13px; }
+
+  /* Progress bar */
+  .progress-wrap { background: #eee; border-radius: 99px; height: 6px; }
+  .progress-bar { background: var(--primary); height: 6px; border-radius: 99px; }
+  .progress-bar.warn { background: var(--warn); }
+  .progress-bar.danger { background: var(--danger); }
+
+  /* Chart placeholder */
+  .chart-placeholder { background: var(--bg); border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-3); font-size: 13px; gap: 8px; }
+  .chart-bars { display: flex; align-items: flex-end; gap: 6px; height: 80px; width: 100%; justify-content: center; }
+  .chart-bar { width: 22px; border-radius: 4px 4px 0 0; background: var(--primary-light); opacity: .7; }
+  .chart-line-svg { width: 100%; height: 90px; }
+
+  /* Form */
+  .form-row { margin-bottom: 14px; }
+  .form-label { font-size: 12px; color: var(--text-2); font-weight: 600; margin-bottom: 5px; display: block; }
+  .form-input { width: 100%; padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 13px; color: var(--text); background: var(--bg); }
+  .form-input:focus { outline: none; border-color: var(--primary-light); }
+  .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* Task */
+  .task-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .task-item:last-child { border-bottom: none; }
+  .task-check { width: 18px; height: 18px; border: 2px solid var(--border); border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .task-check.done { background: var(--primary); border-color: var(--primary); color: white; font-size: 11px; }
+  .task-text { font-size: 13.5px; flex: 1; }
+  .task-text.done { text-decoration: line-through; color: var(--text-3); }
+  .task-tag { font-size: 11px; color: var(--text-3); }
+
+  /* Module tag */
+  .module-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+
+  /* Stock */
+  .stock-up { color: #2e7d32; font-weight: 600; }
+  .stock-down { color: var(--danger); font-weight: 600; }
+
+  /* Divider */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
+
+  /* Tag pill */
+  .tag { display: inline-block; padding: 2px 8px; background: var(--primary-pale); color: var(--primary); border-radius: 20px; font-size: 11px; margin: 2px; }
+
+  /* Alert */
+  .alert { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 12px; }
+  .alert-warn { background: #fff8e1; color: #856404; border-left: 3px solid var(--warn); }
+  .alert-danger { background: #fdecea; color: #c62828; border-left: 3px solid var(--danger); }
+  .alert-info { background: var(--primary-pale); color: var(--primary); border-left: 3px solid var(--primary); }
+
+  /* Checkin calendar */
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal-day { aspect-ratio: 1; border-radius: 6px; background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--text-3); }
+  .cal-day.done { background: var(--primary); color: white; }
+  .cal-day.today { border: 2px solid var(--primary); color: var(--primary); font-weight: 700; }
+
+  /* Currency tag */
+  .ccy { font-size: 10px; padding: 1px 5px; border-radius: 4px; background: #f0f0f0; color: var(--text-2); margin-left: 4px; }
+  .ccy-jpy { background: #fff3e0; color: #e65100; }
+  .ccy-usd { background: #e8f5e9; color: #2e7d32; }
+  .ccy-cny { background: #fce4ec; color: #c62828; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 18px; }
+  .tab { padding: 8px 18px; font-size: 13px; cursor: pointer; color: var(--text-3); border-bottom: 2px solid transparent; margin-bottom: -2px; }
+  .tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .grid-4 { grid-template-columns: 1fr 1fr; }
+    .grid-3 { grid-template-columns: 1fr; }
+    .grid-2 { grid-template-columns: 1fr; }
+    .page { padding: 16px; }
+  }
+
+  /* Mobile bottom nav */
+  .mobile-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--border); padding: 8px 0 12px; z-index: 100; }
+  @media (max-width: 768px) { .mobile-nav { display: flex; justify-content: space-around; } }
+  .mobile-nav-item { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10px; color: var(--text-3); cursor: pointer; padding: 4px 8px; }
+  .mobile-nav-item.active { color: var(--primary); }
+  .mobile-nav-icon { font-size: 20px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      🌿 我的生活
+      <span>Personal Life Manager</span>
+    </div>
+    <nav>
+      <div class="nav-group">
+        <div class="nav-label">总览</div>
+        <div class="nav-item active" onclick="show('dashboard')">
+          <span class="nav-icon">🏠</span> 首页仪表盘
+        </div>
+        <div class="nav-item" onclick="show('tasks')">
+          <span class="nav-icon">✅</span> 今日任务
+        </div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">阅读 & 观影</div>
+        <div class="nav-item" onclick="show('books')">
+          <span class="nav-icon">📚</span> 读书
+        </div>
+        <div class="nav-item" onclick="show('docs')">
+          <span class="nav-icon">🎬</span> 纪录片
+        </div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">身体 & 饮食</div>
+        <div class="nav-item" onclick="show('body')">
+          <span class="nav-icon">⚖️</span> 身材管理
+        </div>
+        <div class="nav-item" onclick="show('diet')">
+          <span class="nav-icon">🥗</span> 饮食管理
+        </div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">财务</div>
+        <div class="nav-item" onclick="show('finance')">
+          <span class="nav-icon">💰</span> 理财管理
+        </div>
+        <div class="nav-item" onclick="show('stock')">
+          <span class="nav-icon">📈</span> 股票学习
+        </div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">语言学习</div>
+        <div class="nav-item" onclick="show('japanese')">
+          <span class="nav-icon">🇯🇵</span> 日语学习
+        </div>
+        <div class="nav-item" onclick="show('english')">
+          <span class="nav-icon">🇬🇧</span> 英语学习
+        </div>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- ===== DASHBOARD ===== -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div>
+          <div class="page-title">早上好 👋</div>
+          <div class="page-subtitle">2026年6月13日 · 星期六</div>
+        </div>
+        <button class="btn btn-primary">+ 快速记录</button>
+      </div>
+
+      <!-- Today stats -->
+      <div class="grid-4" style="margin-bottom:16px">
+        <div class="stat-card">
+          <div class="stat-label">今日体重</div>
+          <div class="stat-value">52.3<span class="stat-unit">kg</span></div>
+          <div class="stat-sub">↓ 0.2kg 较昨日</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">今日热量摄入</div>
+          <div class="stat-value">1,420<span class="stat-unit">kcal</span></div>
+          <div class="stat-sub">目标 1,600 kcal</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">今日饮水</div>
+          <div class="stat-value">5<span class="stat-unit">杯</span></div>
+          <div class="stat-sub">目标 8 杯</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">今日学习</div>
+          <div class="stat-value">45<span class="stat-unit">min</span></div>
+          <div class="stat-sub">日语 30 + 英语 15</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <!-- Today tasks preview -->
+        <div class="card">
+          <div class="card-title" style="display:flex;justify-content:space-between">
+            今日任务
+            <span style="font-size:12px;color:var(--primary);font-weight:600;cursor:pointer" onclick="show('tasks')">查看全部 →</span>
+          </div>
+          <div class="task-item">
+            <div class="task-check done">✓</div>
+            <span class="task-text done">读书 30 分钟</span>
+            <span class="task-tag">📚</span>
+          </div>
+          <div class="task-item">
+            <div class="task-check done">✓</div>
+            <span class="task-text done">记录早餐</span>
+            <span class="task-tag">🥗</span>
+          </div>
+          <div class="task-item">
+            <div class="task-check"></div>
+            <span class="task-text">日语学习 1 小时</span>
+            <span class="task-tag">🇯🇵</span>
+          </div>
+          <div class="task-item">
+            <div class="task-check"></div>
+            <span class="task-text">记录体重</span>
+            <span class="task-tag">⚖️</span>
+          </div>
+          <div class="task-item">
+            <div class="task-check"></div>
+            <span class="task-text">喝水 8 杯</span>
+            <span class="task-tag">💧</span>
+          </div>
+          <div style="margin-top:12px">
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-3);margin-bottom:5px">
+              <span>今日进度</span><span>2 / 5</span>
+            </div>
+            <div class="progress-wrap"><div class="progress-bar" style="width:40%"></div></div>
+          </div>
+        </div>
+
+        <!-- This month overview -->
+        <div class="card">
+          <div class="card-title">本月概览</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div style="text-align:center;padding:12px;background:var(--bg);border-radius:8px">
+              <div style="font-size:24px;font-weight:700;color:var(--primary)">3</div>
+              <div style="font-size:12px;color:var(--text-3);margin-top:2px">本月读书（本）</div>
+            </div>
+            <div style="text-align:center;padding:12px;background:var(--bg);border-radius:8px">
+              <div style="font-size:24px;font-weight:700;color:var(--primary)">¥42,500</div>
+              <div style="font-size:12px;color:var(--text-3);margin-top:2px">本月支出</div>
+            </div>
+            <div style="text-align:center;padding:12px;background:var(--bg);border-radius:8px">
+              <div style="font-size:24px;font-weight:700;color:var(--primary)">18h</div>
+              <div style="font-size:12px;color:var(--text-3);margin-top:2px">本月学习时长</div>
+            </div>
+            <div style="text-align:center;padding:12px;background:var(--bg);border-radius:8px">
+              <div style="font-size:24px;font-weight:700;color:var(--primary)">5</div>
+              <div style="font-size:12px;color:var(--text-3);margin-top:2px">本月纪录片（部）</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Latest across modules -->
+        <div class="card">
+          <div class="card-title">各模块最新动态</div>
+          <div style="font-size:13px">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+              <span>📚 <b>《被讨厌的勇气》</b> · 在读</span>
+              <span style="color:var(--text-3);font-size:12px">今天</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+              <span>🎬 <b>《地球脉动 III》</b> · 已看</span>
+              <span style="color:var(--text-3);font-size:12px">昨天</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+              <span>📈 持仓 <b>Toyota</b> · <span class="stock-up">+2.3%</span></span>
+              <span style="color:var(--text-3);font-size:12px">今天</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">
+              <span>🇯🇵 日语打卡 <b>30 分钟</b></span>
+              <span style="color:var(--text-3);font-size:12px">今天</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Budget alert -->
+        <div class="card">
+          <div class="card-title">财务状态</div>
+          <div class="alert alert-warn" style="margin-bottom:10px">⚠️ 餐饮支出已达预算 83%，请注意控制</div>
+          <div style="font-size:13px">
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+              <span style="color:var(--text-2)">本月总支出</span>
+              <span style="font-weight:600">¥42,500 / ¥60,000</span>
+            </div>
+            <div class="progress-wrap" style="margin-bottom:14px"><div class="progress-bar" style="width:71%"></div></div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+              <span style="color:var(--text-2)">餐饮</span>
+              <span style="font-weight:600;color:var(--warn)">¥16,600 / ¥20,000</span>
+            </div>
+            <div class="progress-wrap"><div class="progress-bar warn" style="width:83%"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== TASKS ===== -->
+    <div class="page" id="page-tasks">
+      <div class="page-header">
+        <div>
+          <div class="page-title">✅ 今日任务</div>
+          <div class="page-subtitle">AI 已根据你的目标生成今日计划</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-outline btn-sm">🔄 重新生成</button>
+          <button class="btn btn-primary btn-sm">+ 添加任务</button>
+        </div>
+      </div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <span style="font-size:13px;color:var(--text-2)">今日完成进度</span>
+          <span style="font-size:13px;font-weight:700;color:var(--primary)">2 / 7 完成</span>
+        </div>
+        <div class="progress-wrap" style="margin-bottom:20px"><div class="progress-bar" style="width:29%"></div></div>
+        <div class="task-item"><div class="task-check done">✓</div><span class="task-text done">读书 30 分钟</span><span class="badge badge-green">📚 读书</span></div>
+        <div class="task-item"><div class="task-check done">✓</div><span class="task-text done">记录早餐</span><span class="badge badge-blue">🥗 饮食</span></div>
+        <div class="task-item"><div class="task-check"></div><span class="task-text">日语学习 1 小时</span><span class="badge badge-orange">🇯🇵 日语</span></div>
+        <div class="task-item"><div class="task-check"></div><span class="task-text">记录午餐 & 晚餐</span><span class="badge badge-blue">🥗 饮食</span></div>
+        <div class="task-item"><div class="task-check"></div><span class="task-text">记录体重</span><span class="badge badge-gray">⚖️ 身材</span></div>
+        <div class="task-item"><div class="task-check"></div><span class="task-text">喝水 8 杯</span><span class="badge badge-blue">💧 饮食</span></div>
+        <div class="task-item"><div class="task-check"></div><span class="task-text">查看股票观察池</span><span class="badge badge-orange">📈 股票</span></div>
+      </div>
+    </div>
+
+    <!-- ===== BOOKS ===== -->
+    <div class="page" id="page-books">
+      <div class="page-header">
+        <div class="page-title">📚 读书</div>
+        <button class="btn btn-primary btn-sm">+ 上传 / 新增</button>
+      </div>
+      <div class="tabs">
+        <div class="tab active">全部 (12)</div>
+        <div class="tab">在读 (2)</div>
+        <div class="tab">读完 (8)</div>
+        <div class="tab">想读 (2)</div>
+      </div>
+
+      <!-- Reading now alert -->
+      <div class="alert alert-info" style="margin-bottom:16px">📖 《被讨厌的勇气》上次阅读：今天 · 连续在读 5 天</div>
+
+      <div class="card" style="padding:0;overflow:hidden">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>书名</th>
+              <th>状态</th>
+              <th>最后阅读</th>
+              <th>评分</th>
+              <th>标签</th>
+              <th>读完日期</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>《被讨厌的勇气》</b></td>
+              <td><span class="badge badge-orange">在读</span></td>
+              <td style="color:var(--primary);font-weight:600">今天</td>
+              <td>—</td>
+              <td><span class="tag">心理</span></td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td><b>《原则》</b></td>
+              <td><span class="badge badge-orange">在读</span></td>
+              <td><span style="color:var(--warn);font-size:12px">⚠️ 已搁置 18 天</span></td>
+              <td>—</td>
+              <td><span class="tag">商业</span></td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td><b>《活出生命的意义》</b></td>
+              <td><span class="badge badge-green">读完</span></td>
+              <td>—</td>
+              <td><span class="stars">★★★★★</span></td>
+              <td><span class="tag">心理</span><span class="tag">人文</span></td>
+              <td>2026-05-20</td>
+            </tr>
+            <tr>
+              <td><b>《置身事内》</b></td>
+              <td><span class="badge badge-green">读完</span></td>
+              <td>—</td>
+              <td><span class="stars">★★★★☆</span></td>
+              <td><span class="tag">经济</span></td>
+              <td>2026-04-10</td>
+            </tr>
+            <tr>
+              <td><b>《金融的逻辑》</b></td>
+              <td><span class="badge badge-gray">想读</span></td>
+              <td>—</td>
+              <td>—</td>
+              <td><span class="tag">理财</span></td>
+              <td>—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===== DOCUMENTARIES ===== -->
+    <div class="page" id="page-docs">
+      <div class="page-header">
+        <div class="page-title">🎬 纪录片</div>
+        <button class="btn btn-primary btn-sm">+ 新增</button>
+      </div>
+      <div class="tabs">
+        <div class="tab active">全部 (18)</div>
+        <div class="tab">已看 (13)</div>
+        <div class="tab">想看 (5)</div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table class="table">
+          <thead>
+            <tr><th>片名</th><th>状态</th><th>评分</th><th>平台</th><th>分类</th><th>观看日期</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>《地球脉动 III》</b></td>
+              <td><span class="badge badge-green">已看</span></td>
+              <td><span class="stars">★★★★★</span></td>
+              <td>Netflix</td>
+              <td><span class="tag">自然</span></td>
+              <td>2026-06-12</td>
+            </tr>
+            <tr>
+              <td><b>《人类星球》</b></td>
+              <td><span class="badge badge-green">已看</span></td>
+              <td><span class="stars">★★★★☆</span></td>
+              <td>B站</td>
+              <td><span class="tag">人文</span></td>
+              <td>2026-05-30</td>
+            </tr>
+            <tr>
+              <td><b>《宇宙时空之旅》</b></td>
+              <td><span class="badge badge-gray">想看</span></td>
+              <td>—</td>
+              <td>YouTube</td>
+              <td><span class="tag">科学</span></td>
+              <td>—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===== BODY ===== -->
+    <div class="page" id="page-body">
+      <div class="page-header">
+        <div class="page-title">⚖️ 身材管理</div>
+        <button class="btn btn-primary btn-sm">+ 记录今日数据</button>
+      </div>
+
+      <!-- Latest snapshot -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">最新记录 · 2026-06-13</div>
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;text-align:center">
+          <div><div style="font-size:20px;font-weight:700;color:var(--primary)">52.3</div><div style="font-size:11px;color:var(--text-3)">体重 kg</div></div>
+          <div><div style="font-size:20px;font-weight:700">62</div><div style="font-size:11px;color:var(--text-3)">腰围 cm</div></div>
+          <div><div style="font-size:20px;font-weight:700">85</div><div style="font-size:11px;color:var(--text-3)">胸围 cm</div></div>
+          <div><div style="font-size:20px;font-weight:700">88</div><div style="font-size:11px;color:var(--text-3)">臀围 cm</div></div>
+          <div><div style="font-size:20px;font-weight:700">25</div><div style="font-size:11px;color:var(--text-3)">臂围 cm</div></div>
+          <div><div style="font-size:20px;font-weight:700">52</div><div style="font-size:11px;color:var(--text-3)">腿围 cm</div></div>
+        </div>
+      </div>
+
+      <!-- Weight chart -->
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div class="card-title" style="margin-bottom:0">体重变化折线图</div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-outline btn-sm">近7天</button>
+            <button class="btn btn-primary btn-sm">近30天</button>
+            <button class="btn btn-outline btn-sm">近3月</button>
+          </div>
+        </div>
+        <!-- SVG line chart simulation -->
+        <svg class="chart-line-svg" viewBox="0 0 400 90" preserveAspectRatio="none">
+          <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#52b788" stop-opacity=".3"/><stop offset="100%" stop-color="#52b788" stop-opacity="0"/></linearGradient></defs>
+          <path d="M0,60 C30,55 60,50 90,52 C120,54 150,48 180,45 C210,42 240,47 270,43 C300,39 330,35 360,33 L400,30 L400,90 L0,90 Z" fill="url(#g)"/>
+          <path d="M0,60 C30,55 60,50 90,52 C120,54 150,48 180,45 C210,42 240,47 270,43 C300,39 330,35 360,33 L400,30" fill="none" stroke="#52b788" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="400" cy="30" r="4" fill="#2d6a4f"/>
+        </svg>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-3);padding:0 4px">
+          <span>5/14</span><span>5/21</span><span>5/28</span><span>6/4</span><span>6/11</span><span>6/13</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== DIET ===== -->
+    <div class="page" id="page-diet">
+      <div class="page-header">
+        <div class="page-title">🥗 饮食管理</div>
+        <button class="btn btn-primary btn-sm">+ 记录餐食</button>
+      </div>
+      <div class="alert alert-info">今日未记录晚餐，别忘了补充记录 🍽️</div>
+      <div class="grid-2">
+        <!-- Today nutrition -->
+        <div class="card">
+          <div class="card-title">今日营养摄入</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+            <div style="text-align:center;padding:12px;background:var(--bg);border-radius:8px">
+              <div style="font-size:22px;font-weight:700;color:var(--primary)">1,420</div>
+              <div style="font-size:11px;color:var(--text-3)">热量 kcal</div>
+            </div>
+            <div style="text-align:center;padding:12px;background:var(--bg);border-radius:8px">
+              <div style="font-size:22px;font-weight:700">68g</div>
+              <div style="font-size:11px;color:var(--text-3)">蛋白质</div>
+            </div>
+            <div style="text-align:center;padding:12px;background:var(--bg);border-radius:8px">
+              <div style="font-size:22px;font-weight:700">155g</div>
+              <div style="font-size:11px;color:var(--text-3)">碳水</div>
+            </div>
+            <div style="text-align:center;padding:12px;background:var(--bg);border-radius:8px">
+              <div style="font-size:22px;font-weight:700">42g</div>
+              <div style="font-size:11px;color:var(--text-3)">脂肪</div>
+            </div>
+          </div>
+          <div style="font-size:12px;color:var(--text-3);margin-bottom:6px">热量目标进度 1,420 / 1,600 kcal</div>
+          <div class="progress-wrap"><div class="progress-bar" style="width:89%"></div></div>
+        </div>
+
+        <!-- Water -->
+        <div class="card">
+          <div class="card-title">今日饮水</div>
+          <div style="text-align:center;padding:16px 0">
+            <div style="font-size:40px;font-weight:700;color:var(--primary)">5</div>
+            <div style="color:var(--text-3);font-size:13px;margin-bottom:16px">杯 / 目标 8 杯</div>
+            <div style="display:flex;gap:8px;justify-content:center">
+              <button class="btn btn-primary">+ 1 杯</button>
+              <button class="btn btn-outline">+ 250ml</button>
+            </div>
+          </div>
+          <div class="progress-wrap"><div class="progress-bar" style="width:62%"></div></div>
+        </div>
+
+        <!-- Meals today -->
+        <div class="card" style="grid-column:span 2">
+          <div class="card-title">今日餐食记录</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+            <div style="padding:14px;background:var(--bg);border-radius:8px">
+              <div style="font-size:12px;color:var(--text-3);margin-bottom:6px">早餐</div>
+              <div style="font-size:13px;font-weight:600;margin-bottom:6px">纳豆饭 + 味噌汤 + 煎蛋</div>
+              <div style="font-size:12px;color:var(--primary)">🤖 估算：约 480 kcal</div>
+            </div>
+            <div style="padding:14px;background:var(--bg);border-radius:8px">
+              <div style="font-size:12px;color:var(--text-3);margin-bottom:6px">午餐</div>
+              <div style="font-size:13px;font-weight:600;margin-bottom:6px">鸡胸肉沙拉 + 全麦面包</div>
+              <div style="font-size:12px;color:var(--primary)">🤖 估算：约 540 kcal</div>
+            </div>
+            <div style="padding:14px;background:#fafafa;border-radius:8px;border:1.5px dashed var(--border);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;cursor:pointer">
+              <div style="font-size:24px">+</div>
+              <div style="font-size:12px;color:var(--text-3)">记录晚餐</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== FINANCE ===== -->
+    <div class="page" id="page-finance">
+      <div class="page-header">
+        <div class="page-title">💰 理财管理</div>
+        <button class="btn btn-primary btn-sm">+ 记录收支</button>
+      </div>
+
+      <div class="alert alert-warn">⚠️ 餐饮支出已达本月预算 83%，距月底还有 17 天</div>
+
+      <div class="grid-3" style="margin-bottom:16px">
+        <div class="stat-card">
+          <div class="stat-label">本月收入</div>
+          <div class="stat-value" style="font-size:20px">¥280,000</div>
+          <div class="stat-sub">工资 ¥260,000 · 副业 ¥20,000</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">本月支出</div>
+          <div class="stat-value" style="font-size:20px;color:var(--danger)">¥42,500</div>
+          <div class="stat-sub">预算 ¥60,000 · 剩余 ¥17,500</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">净资产总计（折合日元）</div>
+          <div class="stat-value" style="font-size:20px">¥1,842,300</div>
+          <div class="stat-sub">汇率更新：2026-06-13</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <!-- Asset overview -->
+        <div class="card">
+          <div class="card-title" style="display:flex;justify-content:space-between">
+            资产总览（多币种）
+            <button class="btn btn-outline btn-sm">刷新汇率</button>
+          </div>
+          <div style="font-size:12px;color:var(--text-3);margin-bottom:12px">参考汇率：1 USD = ¥156.2 · 1 CNY = ¥21.4</div>
+          <table class="table">
+            <thead>
+              <tr><th>资产</th><th>类型</th><th>原始金额</th><th>折合日元</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>三菱 UFJ 存款</td>
+                <td><span class="badge badge-blue">存款</span></td>
+                <td>¥980,000 <span class="ccy ccy-jpy">JPY</span></td>
+                <td>¥980,000</td>
+              </tr>
+              <tr>
+                <td>Interactive Brokers</td>
+                <td><span class="badge badge-green">股票</span></td>
+                <td>$3,500 <span class="ccy ccy-usd">USD</span></td>
+                <td>¥546,700</td>
+              </tr>
+              <tr>
+                <td>支付宝余额宝</td>
+                <td><span class="badge badge-orange">基金</span></td>
+                <td>¥14,800 <span class="ccy ccy-cny">CNY</span></td>
+                <td>¥316,720</td>
+              </tr>
+              <tr>
+                <td style="color:var(--danger)">信用卡负债</td>
+                <td><span class="badge badge-red">负债</span></td>
+                <td>¥1,120 <span class="ccy ccy-jpy">JPY</span></td>
+                <td style="color:var(--danger)">-¥1,120</td>
+              </tr>
+              <tr style="background:var(--primary-pale)">
+                <td><b>净资产合计</b></td>
+                <td></td>
+                <td></td>
+                <td><b>¥1,842,300</b></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Expense chart -->
+        <div class="card">
+          <div class="card-title" style="display:flex;justify-content:space-between">
+            本月支出分类
+            <div style="display:flex;gap:4px">
+              <button class="btn btn-primary btn-sm">饼图</button>
+              <button class="btn btn-outline btn-sm">柱状图</button>
+            </div>
+          </div>
+          <!-- Pie chart placeholder using bars -->
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>🍜 餐饮</span><span>¥16,600 (39%)</span></div>
+              <div class="progress-wrap"><div class="progress-bar warn" style="width:39%"></div></div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>🏠 房租</span><span>¥18,000 (42%)</span></div>
+              <div class="progress-wrap"><div class="progress-bar" style="width:42%"></div></div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>🚃 交通</span><span>¥4,200 (10%)</span></div>
+              <div class="progress-wrap"><div class="progress-bar" style="width:10%"></div></div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>🛍️ 购物</span><span>¥3,700 (9%)</span></div>
+              <div class="progress-wrap"><div class="progress-bar" style="width:9%;background:#a8d5ba"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent transactions -->
+        <div class="card" style="grid-column:span 2">
+          <div class="card-title">最近收支流水</div>
+          <table class="table">
+            <thead>
+              <tr><th>日期</th><th>类型</th><th>分类</th><th>金额</th><th>备注</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>06-13</td>
+                <td><span class="badge badge-green">收入</span></td>
+                <td>副业收入</td>
+                <td style="color:var(--primary);font-weight:600">+¥5,000 <span class="ccy ccy-jpy">JPY</span></td>
+                <td>翻译稿费</td>
+              </tr>
+              <tr>
+                <td>06-12</td>
+                <td><span class="badge badge-red">支出</span></td>
+                <td>餐饮</td>
+                <td style="color:var(--danger);font-weight:600">-¥2,300 <span class="ccy ccy-jpy">JPY</span></td>
+                <td>晚餐 + 超市</td>
+              </tr>
+              <tr>
+                <td>06-10</td>
+                <td><span class="badge badge-green">收入</span></td>
+                <td>工资</td>
+                <td style="color:var(--primary);font-weight:600">+¥260,000 <span class="ccy ccy-jpy">JPY</span></td>
+                <td>6月薪资</td>
+              </tr>
+              <tr>
+                <td>06-08</td>
+                <td><span class="badge badge-red">支出</span></td>
+                <td>购物</td>
+                <td style="color:var(--danger);font-weight:600">-$24.99 <span class="ccy ccy-usd">USD</span></td>
+                <td>Amazon 书籍</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== STOCK ===== -->
+    <div class="page" id="page-stock">
+      <div class="page-header">
+        <div class="page-title">📈 股票学习</div>
+      </div>
+      <div class="tabs">
+        <div class="tab active">持仓</div>
+        <div class="tab">观察池</div>
+        <div class="tab">学习笔记</div>
+      </div>
+
+      <!-- Holdings -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title" style="display:flex;justify-content:space-between">
+          我的持仓
+          <button class="btn btn-outline btn-sm">+ 添加持仓</button>
+        </div>
+        <table class="table">
+          <thead>
+            <tr><th>股票</th><th>买入价</th><th>现价</th><th>盈亏</th><th>今日高点 / 时间</th><th>今日低点 / 时间</th><th>收盘价</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>Toyota (7203)</b></td>
+              <td>¥3,200</td>
+              <td>¥3,274</td>
+              <td><span class="stock-up">+¥74 (+2.3%)</span></td>
+              <td>¥3,290 @ 10:32</td>
+              <td>¥3,210 @ 09:05</td>
+              <td>¥3,274</td>
+            </tr>
+            <tr>
+              <td><b>Sony (6758)</b></td>
+              <td>¥2,800</td>
+              <td>¥2,751</td>
+              <td><span class="stock-down">-¥49 (-1.8%)</span></td>
+              <td>¥2,820 @ 09:15</td>
+              <td>¥2,740 @ 14:45</td>
+              <td>¥2,751</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Watchlist -->
+      <div class="card">
+        <div class="card-title" style="display:flex;justify-content:space-between">
+          观察池
+          <button class="btn btn-outline btn-sm">+ 添加</button>
+        </div>
+        <table class="table">
+          <thead>
+            <tr><th>股票</th><th>现价</th><th>涨跌</th><th>今日高点 / 时间</th><th>今日低点 / 时间</th><th>收盘价</th><th>我的备注</th><th>AI分析</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>Nintendo (7974)</b></td>
+              <td>¥9,850</td>
+              <td><span class="stock-up">+1.2%</span></td>
+              <td>¥9,920 @ 11:05</td>
+              <td>¥9,760 @ 09:30</td>
+              <td>¥9,850</td>
+              <td style="color:var(--text-3);font-size:12px">新游戏发布前关注</td>
+              <td><button class="btn btn-outline btn-sm">🤖 分析</button></td>
+            </tr>
+            <tr>
+              <td><b>Fast Retailing (9983)</b></td>
+              <td>¥52,300</td>
+              <td><span class="stock-down">-0.5%</span></td>
+              <td>¥52,800 @ 10:00</td>
+              <td>¥52,100 @ 14:20</td>
+              <td>¥52,300</td>
+              <td style="color:var(--text-3);font-size:12px">优衣库母公司，长期观察</td>
+              <td><button class="btn btn-outline btn-sm">🤖 分析</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===== JAPANESE ===== -->
+    <div class="page" id="page-japanese">
+      <div class="page-header">
+        <div class="page-title">🇯🇵 日语学习</div>
+        <button class="btn btn-primary btn-sm">+ 今日打卡</button>
+      </div>
+
+      <div class="grid-3" style="margin-bottom:16px">
+        <div class="stat-card">
+          <div class="stat-label">连续打卡</div>
+          <div class="stat-value">12<span class="stat-unit">天</span></div>
+          <div class="stat-sub">本月累计 28 天</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">本月学习时长</div>
+          <div class="stat-value">14.5<span class="stat-unit">h</span></div>
+          <div class="stat-sub">日均 47 分钟</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">目标考试</div>
+          <div class="stat-value" style="font-size:18px">JLPT N1</div>
+          <div class="stat-sub">距考试还有 185 天</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <!-- Calendar -->
+        <div class="card">
+          <div class="card-title">本月打卡日历 · 6月</div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-3);margin-bottom:8px">
+            <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+          </div>
+          <div class="cal-grid">
+            <div class="cal-day"></div><div class="cal-day"></div><div class="cal-day"></div><div class="cal-day done">1</div><div class="cal-day done">2</div><div class="cal-day done">3</div><div class="cal-day done">4</div>
+            <div class="cal-day done">5</div><div class="cal-day done">6</div><div class="cal-day done">7</div><div class="cal-day done">8</div><div class="cal-day done">9</div><div class="cal-day done">10</div><div class="cal-day done">11</div>
+            <div class="cal-day done">12</div><div class="cal-day today">13</div><div class="cal-day">14</div><div class="cal-day">15</div><div class="cal-day">16</div><div class="cal-day">17</div><div class="cal-day">18</div>
+          </div>
+        </div>
+
+        <!-- Study chart -->
+        <div class="card">
+          <div class="card-title">近7天学习时长（分钟）</div>
+          <div class="chart-bars">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px"><div class="chart-bar" style="height:40px"></div><span style="font-size:10px;color:var(--text-3)">周日</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px"><div class="chart-bar" style="height:60px"></div><span style="font-size:10px;color:var(--text-3)">周一</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px"><div class="chart-bar" style="height:30px"></div><span style="font-size:10px;color:var(--text-3)">周二</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px"><div class="chart-bar" style="height:70px"></div><span style="font-size:10px;color:var(--text-3)">周三</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px"><div class="chart-bar" style="height:50px"></div><span style="font-size:10px;color:var(--text-3)">周四</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px"><div class="chart-bar" style="height:80px"></div><span style="font-size:10px;color:var(--text-3)">周五</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px"><div class="chart-bar" style="height:30px;background:var(--primary-light);opacity:1"></div><span style="font-size:10px;color:var(--primary);font-weight:600">今天</span></div>
+          </div>
+        </div>
+
+        <!-- Resources -->
+        <div class="card" style="grid-column:span 2">
+          <div class="card-title" style="display:flex;justify-content:space-between">
+            学习资源收藏
+            <button class="btn btn-outline btn-sm">+ 收藏</button>
+          </div>
+          <table class="table">
+            <thead><tr><th>标题</th><th>类型</th><th>备注</th><th>链接</th></tr></thead>
+            <tbody>
+              <tr><td><b>新完全掌握 N1 文法</b></td><td><span class="badge badge-blue">教材</span></td><td>主力教材</td><td><span style="color:var(--primary);cursor:pointer">打开 ↗</span></td></tr>
+              <tr><td><b>Anki</b></td><td><span class="badge badge-orange">App</span></td><td>单词记忆</td><td>—</td></tr>
+              <tr><td><b>NHK Web Easy</b></td><td><span class="badge badge-green">网站</span></td><td>每日泛读</td><td><span style="color:var(--primary);cursor:pointer">打开 ↗</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== ENGLISH ===== -->
+    <div class="page" id="page-english">
+      <div class="page-header">
+        <div class="page-title">🇬🇧 英语学习</div>
+        <button class="btn btn-primary btn-sm">+ 今日打卡</button>
+      </div>
+      <div class="grid-3" style="margin-bottom:16px">
+        <div class="stat-card">
+          <div class="stat-label">连续打卡</div>
+          <div class="stat-value">6<span class="stat-unit">天</span></div>
+          <div class="stat-sub">本月累计 10 天</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">本月学习时长</div>
+          <div class="stat-value">5.5<span class="stat-unit">h</span></div>
+          <div class="stat-sub">日均 27 分钟</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">目标考试</div>
+          <div class="stat-value" style="font-size:18px">英语六级</div>
+          <div class="stat-sub">距考试还有 210 天</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">最近打卡记录</div>
+        <table class="table">
+          <thead><tr><th>日期</th><th>时长</th><th>内容</th><th>使用App</th></tr></thead>
+          <tbody>
+            <tr><td>06-13</td><td>15 min</td><td>精读 The Economist 一篇</td><td>—</td></tr>
+            <tr><td>06-12</td><td>30 min</td><td>六级真题阅读</td><td>扇贝</td></tr>
+            <tr><td>06-11</td><td>20 min</td><td>BBC Learning English 听力</td><td>BBC App</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Mobile bottom nav -->
+<nav class="mobile-nav">
+  <div class="mobile-nav-item active" onclick="show('dashboard')"><span class="mobile-nav-icon">🏠</span>首页</div>
+  <div class="mobile-nav-item" onclick="show('tasks')"><span class="mobile-nav-icon">✅</span>任务</div>
+  <div class="mobile-nav-item" onclick="show('finance')"><span class="mobile-nav-icon">💰</span>理财</div>
+  <div class="mobile-nav-item" onclick="show('stock')"><span class="mobile-nav-icon">📈</span>股票</div>
+  <div class="mobile-nav-item" onclick="show('japanese')"><span class="mobile-nav-icon">🇯🇵</span>日语</div>
+</nav>
+
+<script>
+  const pages = {
+    dashboard: 'page-dashboard',
+    tasks: 'page-tasks',
+    books: 'page-books',
+    docs: 'page-docs',
+    body: 'page-body',
+    diet: 'page-diet',
+    finance: 'page-finance',
+    stock: 'page-stock',
+    japanese: 'page-japanese',
+    english: 'page-english',
+  };
+
+  const navMap = {
+    dashboard: 0, tasks: 1,
+    books: 2, docs: 3,
+    body: 4, diet: 5,
+    finance: 6, stock: 7,
+    japanese: 8, english: 9,
+  };
+
+  function show(key) {
+    // pages
+    Object.values(pages).forEach(id => {
+      document.getElementById(id).classList.remove('active');
+    });
+    document.getElementById(pages[key]).classList.add('active');
+
+    // sidebar nav
+    document.querySelectorAll('.nav-item').forEach((el, i) => {
+      el.classList.remove('active');
+    });
+    const navItems = document.querySelectorAll('.nav-item');
+    const idx = navMap[key];
+    if (navItems[idx]) navItems[idx].classList.add('active');
+
+    // mobile nav
+    document.querySelectorAll('.mobile-nav-item').forEach(el => el.classList.remove('active'));
+    const mobileKeys = ['dashboard','tasks','finance','stock','japanese'];
+    const mi = mobileKeys.indexOf(key);
+    if (mi >= 0) document.querySelectorAll('.mobile-nav-item')[mi].classList.add('active');
+  }
+</script>
+</body>
+</html>
