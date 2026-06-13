@@ -134,17 +134,17 @@ export default function Tasks({ period }: { period: Period }) {
           <span style={{ fontSize: 15, fontWeight: 600, color: '#1b1b1b' }}>{info.label}</span>
         </div>
 
-        <button onClick={() => setAnchor(info.next)} style={{
-          padding: '6px 14px', borderRadius: 8, border: '1.5px solid #e4dff0',
-          background: '#f5f3fa', fontSize: 13, cursor: 'pointer', color: '#555',
-        }}>{nextLabel} →</button>
-
         {!info.isToday && (
           <button onClick={() => setAnchor(dayjs())} style={{
             padding: '6px 12px', borderRadius: 8, border: '1.5px solid #6c4fa3',
             background: '#ede8f7', fontSize: 12, cursor: 'pointer', color: '#6c4fa3', fontWeight: 600,
           }}>{backLabel[period]}</button>
         )}
+
+        <button onClick={() => setAnchor(info.next)} style={{
+          padding: '6px 14px', borderRadius: 8, border: '1.5px solid #e4dff0',
+          background: '#f5f3fa', fontSize: 13, cursor: 'pointer', color: '#555',
+        }}>{nextLabel} →</button>
       </div>
 
       <Card>
