@@ -117,7 +117,7 @@ export default function Tasks({ period }: { period: Period }) {
           <select value={newTag} onChange={e => setNewTag(e.target.value)}
             style={{ padding: '8px 10px', border: '1.5px solid #e4dff0', borderRadius: 8, fontSize: 12, background: '#f5f3fa', outline: 'none' }}>
             <option value="">模块标签</option>
-            {MODULE_TAGS.map(t => <option key={t} value={t}>{t}</option>)}
+            {MODULE_TAGS.map(tag => <option key={tag} value={tag}>{tag}</option>)}
           </select>
           <Button onClick={handleAdd} size="md">+ 添加</Button>
         </div>

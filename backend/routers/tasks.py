@@ -52,12 +52,8 @@ def update_task(task_id: int, data: TaskUpdate, db: Session = Depends(get_db)):
     task = db.query(DailyTask).filter(DailyTask.id == task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Not found")
-    if data.title is not None:
-        task.title = data.title
-    if data.module_tag is not None:
-        task.module_tag = data.module_tag
-    if data.date is not None:
-        task.date = data.date
+    for field, value in data.dict(exclude_unset=True).items():
+        setattr(task, field, value)
     db.commit()
     db.refresh(task)
     return task
