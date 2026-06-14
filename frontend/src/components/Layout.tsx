@@ -13,17 +13,23 @@ const staticNav = [
     { to: '/tasks/month', icon: '📆', label: '本月任务' },
     { to: '/tasks/year', icon: '🗃️', label: '本年任务' },
   ]},
-  { group: '阅读 & 观影', items: [
+  { group: '自我提升', items: [
     { to: '/books', icon: '📚', label: '读书' },
     { to: '/documentaries', icon: '🎬', label: '纪录片' },
+    { to: '/stock', icon: '📈', label: '股票' },
   ]},
   { group: '身体 & 饮食', items: [
     { to: '/body', icon: '⚖️', label: '身材管理' },
     { to: '/diet', icon: '🥗', label: '饮食管理' },
   ]},
   { group: '财务', items: [
-    { to: '/finance', icon: '💰', label: '理财管理' },
-    { to: '/stock', icon: '📈', label: '股票学习' },
+    { to: '/finance/transactions', icon: '💰', label: '收入 & 支出' },
+    { to: '/finance/assets', icon: '🏦', label: '资产总览' },
+    { to: '/finance/investment', icon: '📊', label: '投资记录' },
+    { to: '/finance/investment/us', icon: '🇺🇸', label: '美股', indent: true },
+    { to: '/finance/investment/jp', icon: '🇯🇵', label: '日股', indent: true },
+    { to: '/finance/investment/cn', icon: '🇨🇳', label: 'A股', indent: true },
+    { to: '/finance/investment/fund', icon: '📈', label: '基金', indent: true },
   ]},
 ]
 
@@ -41,6 +47,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [showAdd, setShowAdd] = useState(false)
   const [form, setForm] = useState({ name: '', code: '', emoji: '' })
   const [managing, setManaging] = useState(false)
+  const [investCollapsed, setInvestCollapsed] = useState(false)
 
   const handleAdd = async () => {
     if (!form.name.trim() || !form.code.trim()) return
@@ -77,13 +84,33 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   {group.group}
                 </div>
               )}
-              {group.items.map(item => (
-                <NavLink key={item.to} to={item.to} end={item.to === '/'}
-                  style={({ isActive }) => navLinkStyle(isActive)}>
-                  <span style={{ width: 18, textAlign: 'center' }}>{item.icon}</span>
-                  {item.label}
-                </NavLink>
-              ))}
+              {group.items.map(item => {
+                const isIndent = (item as any).indent
+                // 投资记录的子条目：显示收缩按钮，且根据收缩状态隐藏
+                if (item.to === '/finance/investment') {
+                  return (
+                    <div key={item.to} style={{ display: 'flex', alignItems: 'center' }}>
+                      <NavLink to={item.to} end
+                        style={({ isActive }) => ({ ...navLinkStyle(isActive), flex: 1 })}>
+                        <span style={{ width: 18, textAlign: 'center' }}>{item.icon}</span>
+                        <span>{item.label}</span>
+                      </NavLink>
+                      <span onClick={() => setInvestCollapsed(c => !c)}
+                        style={{ fontSize: 11, color: '#bbb', cursor: 'pointer', paddingRight: 12, userSelect: 'none' }}>
+                        {investCollapsed ? '▸' : '▾'}
+                      </span>
+                    </div>
+                  )
+                }
+                if (isIndent && investCollapsed) return null
+                return (
+                  <NavLink key={item.to} to={item.to} end={item.to === '/'}
+                    style={({ isActive }) => ({ ...navLinkStyle(isActive), paddingLeft: isIndent ? 32 : 16 })}>
+                    <span style={{ width: 18, textAlign: 'center' }}>{item.icon}</span>
+                    <span style={{ fontSize: isIndent ? 12.5 : 13.5 }}>{item.label}</span>
+                  </NavLink>
+                )
+              })}
             </div>
           ))}
 

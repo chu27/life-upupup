@@ -77,6 +77,16 @@ export const getSupplements = (date?: string) => api.get('/diet/supplements', { 
 export const createSupplement = (data: any) => api.post('/diet/supplements', data).then(r => r.data)
 export const deleteSupplement = (id: number) => api.delete(`/diet/supplements/${id}`)
 
+// ── Investment ─────────────────────────────────────────
+export const getInvestmentItems = (category?: string) => api.get('/investment/items', { params: category ? { category } : {} }).then(r => r.data)
+export const createInvestmentItem = (data: any) => api.post('/investment/items', data).then(r => r.data)
+export const updateInvestmentItem = (id: number, data: any) => api.put(`/investment/items/${id}`, data).then(r => r.data)
+export const deleteInvestmentItem = (id: number) => api.delete(`/investment/items/${id}`)
+export const getInvestmentLogs = (item_id?: number) => api.get('/investment/logs', { params: item_id ? { item_id } : {} }).then(r => r.data)
+export const upsertInvestmentLog = (data: any) => api.post('/investment/logs', data).then(r => r.data)
+export const getInvestmentSummary = (date?: string, category?: string) => api.get('/investment/summary', { params: { ...(date ? { target_date: date } : {}), ...(category ? { category } : {}) } }).then(r => r.data)
+export const getCategoryPnl = (category: string) => api.get('/investment/category-pnl', { params: { category } }).then(r => r.data)
+
 // ── Tasks ──────────────────────────────────────────────
 export const getTasks = (period: string, dateKey: string) =>
   api.get('/tasks', { params: { period, date_key: dateKey } }).then(r => r.data)

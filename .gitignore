@@ -4,6 +4,7 @@ backend/__pycache__/
 backend/**/__pycache__/
 backend/*.pyc
 backend/life_manager.db
+backend/life.db
 
 # Node
 frontend/node_modules/
