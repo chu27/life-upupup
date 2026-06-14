@@ -86,6 +86,7 @@ export const getInvestmentLogs = (item_id?: number) => api.get('/investment/logs
 export const upsertInvestmentLog = (data: any) => api.post('/investment/logs', data).then(r => r.data)
 export const getInvestmentSummary = (date?: string, category?: string) => api.get('/investment/summary', { params: { ...(date ? { target_date: date } : {}), ...(category ? { category } : {}) } }).then(r => r.data)
 export const getCategoryPnl = (category: string) => api.get('/investment/category-pnl', { params: { category } }).then(r => r.data)
+export const getInvestmentDailyTotals = (date?: string) => api.get('/investment/daily-totals', { params: date ? { target_date: date } : {} }).then(r => r.data)
 
 // ── Tasks ──────────────────────────────────────────────
 export const getTasks = (period: string, dateKey: string) =>

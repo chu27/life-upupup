@@ -24,6 +24,7 @@ class Asset(Base):
     asset_type = Column(String(20), nullable=False)  # 存款 / 基金 / 股票 / 现金 / 负债
     amount = Column(Float, nullable=False)
     currency = Column(String(5), default="JPY")
+    investment_category = Column(String(20), nullable=True)  # 绑定投资分类：基金/A股/日股/美股
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
 

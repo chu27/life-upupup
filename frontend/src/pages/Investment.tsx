@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, LabelList } from 'recharts'
 import Card, { CardTitle } from '../components/Card'
@@ -13,8 +14,11 @@ const CAT_CCY: Record<string, string> = { '美股': 'USD', '日股': 'JPY', 'A�
 
 const CATEGORIES = ['美股', '日股', 'A股', '基金']
 
+const CAT_PATH: Record<string, string> = { '美股': '/finance/investment/us', '日股': '/finance/investment/jp', 'A股': '/finance/investment/cn', '基金': '/finance/investment/fund' }
+
 function InvestmentOverview() {
   const today = dayjs().format('YYYY-MM-DD')
+  const navigate = useNavigate()
   const [summaries, setSummaries] = useState<Record<string, any[]>>({})
   const [pnlHistory, setPnlHistory] = useState<Record<string, any[]>>({})
 
@@ -42,11 +46,15 @@ function InvestmentOverview() {
           const pnl = rows.reduce((s: number, r: any) => s + (r.pnl || 0), 0)
           const hasData = rows.some((r: any) => r.pnl != null)
           return (
-            <div key={cat} style={{
+            <div key={cat} onClick={() => navigate(CAT_PATH[cat])} style={{
               padding: '16px 18px', borderRadius: 12, background: '#fff',
               boxShadow: '0 2px 12px rgba(108,79,163,.08)',
-              borderLeft: `4px solid ${pnl >= 0 ? '#e63946' : '#22c55e'}`
-            }}>
+              borderLeft: `4px solid ${pnl >= 0 ? '#e63946' : '#22c55e'}`,
+              cursor: 'pointer', transition: 'box-shadow .15s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 20px rgba(108,79,163,.18)')}
+            onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 2px 12px rgba(108,79,163,.08)')}
+            >
               <div style={{ fontSize: 12, color: '#999', marginBottom: 6 }}>{CAT_ICON[cat]} {cat} · 当日盈亏</div>
               <div style={{ fontSize: 22, fontWeight: 700, color: pnl >= 0 ? '#e63946' : '#22c55e' }}>
                 {hasData ? `${pnl >= 0 ? '+' : ''}${pnl.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : '—'}
@@ -99,6 +107,7 @@ export default function Investment({ category }: { category?: string }) {
 
   // 输入今日金额的临时状态
   const [inputAmounts, setInputAmounts] = useState<Record<number, string>>({})
+  const [inputCapital, setInputCapital] = useState<Record<number, string>>({})
   const [saving, setSaving] = useState<Record<number, boolean>>({})
 
   // 管理条目弹窗
@@ -117,10 +126,15 @@ export default function Investment({ category }: { category?: string }) {
     ])
     setSummary(s)
     setItems(its)
-    // 预填今日已有的金额
+    // 预填今日已有的金额和资金变动
     const pre: Record<number, string> = {}
-    s.forEach((row: any) => { if (row.today != null) pre[row.id] = String(row.today) })
+    const preCap: Record<number, string> = {}
+    s.forEach((row: any) => {
+      if (row.today != null) pre[row.id] = String(row.today)
+      if (row.capital_change != null && row.capital_change !== 0) preCap[row.id] = String(row.capital_change)
+    })
     setInputAmounts(pre)
+    setInputCapital(preCap)
   }
 
   useEffect(() => { load() }, [viewDate, category])
@@ -133,7 +147,7 @@ export default function Investment({ category }: { category?: string }) {
       const result = sorted.map((log: any, i: number) => ({
         date: log.date.slice(5), // MM-DD
         amount: log.amount,
-        pnl: i > 0 ? log.amount - sorted[i - 1].amount : 0,
+        pnl: i > 0 ? log.amount - sorted[i - 1].amount - (log.capital_change || 0) : 0,
       }))
       setChartLogs(result)
     })
@@ -142,8 +156,14 @@ export default function Investment({ category }: { category?: string }) {
   const handleSaveAmount = async (itemId: number) => {
     const val = inputAmounts[itemId]
     if (val === '' || val == null) return
+    const cap = inputCapital[itemId]
     setSaving(s => ({ ...s, [itemId]: true }))
-    await upsertInvestmentLog({ item_id: itemId, date: viewDate, amount: Number(val) })
+    await upsertInvestmentLog({
+      item_id: itemId,
+      date: viewDate,
+      amount: Number(val),
+      capital_change: cap !== '' && cap != null ? Number(cap) : 0,
+    })
     setSaving(s => ({ ...s, [itemId]: false }))
     load()
   }
@@ -201,11 +221,11 @@ export default function Investment({ category }: { category?: string }) {
             return (
               <div key={ccy} style={{
                 padding: '16px 20px', borderRadius: 12,
-                background: ccyPnl >= 0 ? '#fff9f0' : '#fff5f5',
-                border: `1px solid ${ccyPnl >= 0 ? '#fed7aa' : '#fecaca'}`,
+                background: ccyPnl >= 0 ? '#fff5f5' : '#f0fff4',
+                border: `1px solid ${ccyPnl >= 0 ? '#fecaca' : '#bbf7d0'}`,
               }}>
                 <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>{CCY_LABEL[ccy] || ccy} 当日盈亏</div>
-                <div style={{ fontSize: 24, fontWeight: 700, color: ccyPnl >= 0 ? '#e65100' : '#dc2626' }}>
+                <div style={{ fontSize: 24, fontWeight: 700, color: ccyPnl >= 0 ? '#e63946' : '#22c55e' }}>
                   {hasPnl ? `${ccyPnl >= 0 ? '+' : ''}${ccyPnl.toLocaleString(undefined, { maximumFractionDigits: 0 })} ${ccy}` : '—'}
                 </div>
               </div>
@@ -221,7 +241,7 @@ export default function Investment({ category }: { category?: string }) {
             <CardTitle>{CCY_LABEL[ccy] || ccy}（{ccy}）</CardTitle>
             <span style={{ fontSize: 12, color: '#aaa' }}>
               小计盈亏：
-              <span style={{ fontWeight: 700, color: rows.reduce((s, r) => s + (r.pnl || 0), 0) >= 0 ? '#16a34a' : '#dc2626' }}>
+              <span style={{ fontWeight: 700, color: rows.reduce((s, r) => s + (r.pnl || 0), 0) >= 0 ? '#e63946' : '#22c55e' }}>
                 {rows.reduce((s, r) => s + (r.pnl || 0), 0) >= 0 ? '+' : ''}
                 {rows.reduce((s, r) => s + (r.pnl || 0), 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} {ccy}
               </span>
@@ -229,7 +249,7 @@ export default function Investment({ category }: { category?: string }) {
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
-              <tr>{['投资项', '昨日金额', isToday ? '今日金额（填入）' : '当日金额', '盈亏', '历史走势', '操作'].map(h =>
+              <tr>{['投资项', '昨日金额', isToday ? '今日金额（填入）' : '当日金额', '资金变动（选填）', '盈亏', '历史走势', '操作'].map(h =>
                 <th key={h} style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, color: '#999', borderBottom: '1px solid #f0f0f0' }}>{h}</th>
               )}</tr>
             </thead>
@@ -251,8 +271,19 @@ export default function Investment({ category }: { category?: string }) {
                           type="number"
                           value={inputAmounts[row.id] ?? ''}
                           onChange={e => setInputAmounts(a => ({ ...a, [row.id]: e.target.value }))}
-                          placeholder="输入金额"
+                          placeholder="输入余额"
                           style={{ width: 110, padding: '5px 8px', fontSize: 13, border: '1px solid #e4dff0', borderRadius: 6, outline: 'none' }}
+                        />
+                      </div>
+                    </td>
+                    <td style={{ padding: '12px 10px', borderBottom: '1px solid #f0f0f0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <input
+                          type="number"
+                          value={inputCapital[row.id] ?? ''}
+                          onChange={e => setInputCapital(a => ({ ...a, [row.id]: e.target.value }))}
+                          placeholder="追加(+) / 提现(-)"
+                          style={{ width: 130, padding: '5px 8px', fontSize: 12, border: '1px solid #e4dff0', borderRadius: 6, outline: 'none', color: '#888' }}
                         />
                         <button onClick={() => handleSaveAmount(row.id)} disabled={saving[row.id]}
                           style={{ padding: '5px 10px', background: '#6c4fa3', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer', opacity: saving[row.id] ? 0.6 : 1 }}>
@@ -261,7 +292,7 @@ export default function Investment({ category }: { category?: string }) {
                       </div>
                     </td>
                     <td style={{ padding: '12px 10px', borderBottom: '1px solid #f0f0f0', fontWeight: 700,
-                      color: row.pnl == null ? '#aaa' : row.pnl >= 0 ? '#16a34a' : '#dc2626' }}>
+                      color: row.pnl == null ? '#aaa' : row.pnl >= 0 ? '#e63946' : '#22c55e' }}>
                       {row.pnl == null ? '—' : `${row.pnl >= 0 ? '+' : ''}${row.pnl.toLocaleString(undefined, { maximumFractionDigits: 0 })} ${ccy}`}
                     </td>
                     <td style={{ padding: '12px 10px', borderBottom: '1px solid #f0f0f0' }}>

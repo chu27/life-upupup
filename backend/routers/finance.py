@@ -74,6 +74,7 @@ class AssetCreate(BaseModel):
     asset_type: str
     amount: float
     currency: str = "JPY"
+    investment_category: Optional[str] = None
 
 
 @router.get("/assets")

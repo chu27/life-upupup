@@ -23,4 +23,5 @@ class InvestmentLog(Base):
     item_id = Column(Integer, ForeignKey("investment_items.id"), nullable=False)
     date = Column(Date, nullable=False)
     amount = Column(Float, nullable=False)           # 当日账户显示金额
+    capital_change = Column(Float, default=0)        # 当日资金变动（追加为正，提现/清仓为负）
     created_at = Column(DateTime, server_default=func.now())

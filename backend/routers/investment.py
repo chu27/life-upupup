@@ -22,6 +22,7 @@ class LogCreate(BaseModel):
     item_id: int
     date: date
     amount: float
+    capital_change: float = 0
 
 
 # ── 投资条目 ──────────────────────────────────────────
@@ -81,6 +82,7 @@ def upsert_log(data: LogCreate, db: Session = Depends(get_db)):
     ).first()
     if existing:
         existing.amount = data.amount
+        existing.capital_change = data.capital_change
         db.commit()
         db.refresh(existing)
         return existing
@@ -102,20 +104,25 @@ def get_category_pnl(category: str, db: Session = Depends(get_db)):
         InvestmentLog.item_id.in_(item_ids)
     ).order_by(InvestmentLog.date).all()
 
-    # 按日期聚合总金额
-    daily: dict = {}
+    # 按日期聚合总金额和资金变动
+    daily_amount: dict = {}
+    daily_capital: dict = {}
     for log in logs:
         d = str(log.date)
-        daily[d] = daily.get(d, 0) + log.amount
+        daily_amount[d] = daily_amount.get(d, 0) + log.amount
+        daily_capital[d] = daily_capital.get(d, 0) + (log.capital_change or 0)
 
-    sorted_dates = sorted(daily.keys())
+    sorted_dates = sorted(daily_amount.keys())
     result = []
     for i, d in enumerate(sorted_dates):
-        prev = daily[sorted_dates[i - 1]] if i > 0 else None
+        prev = daily_amount[sorted_dates[i - 1]] if i > 0 else None
+        cap = daily_capital.get(d, 0)
+        pnl = round(daily_amount[d] - prev - cap, 2) if prev is not None else None
         result.append({
             "date": d,
-            "total": daily[d],
-            "pnl": round(daily[d] - prev, 2) if prev is not None else None,
+            "total": daily_amount[d],
+            "capital_change": cap,
+            "pnl": pnl,
         })
     return result
 
@@ -128,6 +135,34 @@ def delete_log(log_id: int, db: Session = Depends(get_db)):
     db.delete(log)
     db.commit()
     return {"ok": True}
+
+
+# ── 各分类最新余额（供资产总览同步） ────────────────
+@router.get("/daily-totals")
+def get_daily_totals(db: Session = Depends(get_db)):
+    """
+    返回各分类按货币分组的最新余额之和。
+    每个投资条目取其最近一条记录（不限今日），避免当天未填时显示0。
+    结构：{ "基金": { "CNY": 100000, "JPY": 50000 }, "美股": { "USD": 12345 }, ... }
+    """
+    CATEGORIES = ["美股", "日股", "A股", "基金"]
+    result: dict = {cat: {} for cat in CATEGORIES}
+
+    for cat in CATEGORIES:
+        items = db.query(InvestmentItem).filter(InvestmentItem.category == cat).all()
+        for item in items:
+            # 取该条目最新一条记录
+            latest = db.query(InvestmentLog).filter(
+                InvestmentLog.item_id == item.id
+            ).order_by(desc(InvestmentLog.date)).first()
+            if latest:
+                ccy = item.currency
+                result[cat][ccy] = result[cat].get(ccy, 0) + latest.amount
+
+    # 四舍五入
+    for cat in result:
+        result[cat] = {ccy: round(v, 2) for ccy, v in result[cat].items()}
+    return result
 
 
 # ── 盈亏汇总（今日 vs 昨日） ──────────────────────────
@@ -150,6 +185,9 @@ def get_summary(target_date: Optional[date] = None, category: Optional[str] = No
             InvestmentLog.item_id == item.id,
             InvestmentLog.date == yesterday
         ).first()
+        pnl = None
+        if today_log and yesterday_log:
+            pnl = round(today_log.amount - yesterday_log.amount - (today_log.capital_change or 0), 2)
         result.append({
             "id": item.id,
             "name": item.name,
@@ -157,6 +195,7 @@ def get_summary(target_date: Optional[date] = None, category: Optional[str] = No
             "notes": item.notes,
             "today": today_log.amount if today_log else None,
             "yesterday": yesterday_log.amount if yesterday_log else None,
-            "pnl": (today_log.amount - yesterday_log.amount) if (today_log and yesterday_log) else None,
+            "capital_change": today_log.capital_change if today_log else None,
+            "pnl": pnl,
         })
     return result
