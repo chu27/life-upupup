@@ -1,6 +1,9 @@
+import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
+import { useLanguages } from '../App'
+import { addLanguage, deleteLanguage } from '../api'
 
-const nav = [
+const staticNav = [
   { group: '', items: [
     { to: '/', icon: '🏠', label: '首页' },
   ]},
@@ -22,13 +25,37 @@ const nav = [
     { to: '/finance', icon: '💰', label: '理财管理' },
     { to: '/stock', icon: '📈', label: '股票学习' },
   ]},
-  { group: '语言学习', items: [
-    { to: '/japanese', icon: '🇯🇵', label: '日语学习' },
-    { to: '/english', icon: '🇬🇧', label: '英语学习' },
-  ]},
 ]
 
+const navLinkStyle = (isActive: boolean) => ({
+  display: 'flex', alignItems: 'center', gap: 8,
+  padding: '9px 16px', fontSize: 13.5, textDecoration: 'none',
+  color: isActive ? '#6c4fa3' : '#555',
+  background: isActive ? '#ede8f7' : 'transparent',
+  fontWeight: isActive ? 600 : 400,
+  transition: 'background .15s',
+})
+
 export default function Layout({ children }: { children: React.ReactNode }) {
+  const { languages, reload } = useLanguages()
+  const [showAdd, setShowAdd] = useState(false)
+  const [form, setForm] = useState({ name: '', code: '', emoji: '' })
+  const [managing, setManaging] = useState(false)
+
+  const handleAdd = async () => {
+    if (!form.name.trim() || !form.code.trim()) return
+    await addLanguage({ name: form.name.trim(), code: form.code.trim(), emoji: form.emoji.trim() || null })
+    setForm({ name: '', code: '', emoji: '' })
+    setShowAdd(false)
+    reload()
+  }
+
+  const handleDelete = async (id: number, name: string) => {
+    if (!confirm(`删除「${name}」？该语言的打卡记录不会删除。`)) return
+    await deleteLanguage(id)
+    reload()
+  }
+
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', width: '100%' }}>
       {/* Sidebar */}
@@ -40,8 +67,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div style={{ fontSize: 15, fontWeight: 700, color: '#6c4fa3' }}>🌿 我的生活</div>
           <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>Personal Life Manager</div>
         </div>
+
         <nav style={{ flex: 1 }}>
-          {nav.map(group => (
+          {/* 静态导航 */}
+          {staticNav.map(group => (
             <div key={group.group || '_top'} style={{ padding: '12px 0 4px' }}>
               {group.group && (
                 <div style={{ fontSize: 10, color: '#999', padding: '0 16px 4px', textTransform: 'uppercase', letterSpacing: '.5px' }}>
@@ -49,25 +78,63 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 </div>
               )}
               {group.items.map(item => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  end={item.to === '/'}
-                  style={({ isActive }) => ({
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '9px 16px', fontSize: 13.5, textDecoration: 'none',
-                    color: isActive ? '#6c4fa3' : '#555',
-                    background: isActive ? '#ede8f7' : 'transparent',
-                    fontWeight: isActive ? 600 : 400,
-                    transition: 'background .15s',
-                  })}
-                >
+                <NavLink key={item.to} to={item.to} end={item.to === '/'}
+                  style={({ isActive }) => navLinkStyle(isActive)}>
                   <span style={{ width: 18, textAlign: 'center' }}>{item.icon}</span>
                   {item.label}
                 </NavLink>
               ))}
             </div>
           ))}
+
+          {/* 语言学习（动态） */}
+          <div style={{ padding: '12px 0 4px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px 4px' }}>
+              <span style={{ fontSize: 10, color: '#999', textTransform: 'uppercase', letterSpacing: '.5px' }}>语言学习</span>
+              <span
+                onClick={() => setManaging(m => !m)}
+                style={{ fontSize: 10, color: managing ? '#6c4fa3' : '#bbb', cursor: 'pointer', fontWeight: 600 }}
+              >{managing ? '完成' : '管理'}</span>
+            </div>
+
+            {languages.map(lang => (
+              <div key={lang.id} style={{ display: 'flex', alignItems: 'center' }}>
+                <NavLink to={`/language/${lang.code}`}
+                  style={({ isActive }) => ({ ...navLinkStyle(isActive), flex: 1 })}>
+                  <span style={{ width: 18, textAlign: 'center' }}>{lang.emoji || '🌐'}</span>
+                  {lang.name}学习
+                </NavLink>
+                {managing && (
+                  <span onClick={() => handleDelete(lang.id, lang.name)}
+                    style={{ color: '#e63946', cursor: 'pointer', fontSize: 14, paddingRight: 12 }}>×</span>
+                )}
+              </div>
+            ))}
+
+            {/* 添加语言 */}
+            {managing && !showAdd && (
+              <div onClick={() => setShowAdd(true)} style={{
+                padding: '7px 16px', fontSize: 13, color: '#6c4fa3', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}>＋ 添加语言</div>
+            )}
+
+            {showAdd && (
+              <div style={{ padding: '8px 12px', background: '#f5f3fa', margin: '4px 8px', borderRadius: 8 }}>
+                <input placeholder="语言名称（如：法语）" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                  style={{ width: '100%', padding: '5px 8px', fontSize: 12, border: '1px solid #e4dff0', borderRadius: 6, marginBottom: 4, boxSizing: 'border-box', outline: 'none' }} />
+                <input placeholder="代码（如：french）" value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))}
+                  style={{ width: '100%', padding: '5px 8px', fontSize: 12, border: '1px solid #e4dff0', borderRadius: 6, marginBottom: 4, boxSizing: 'border-box', outline: 'none' }} />
+                <input placeholder="Emoji（如：🇫🇷）" value={form.emoji} onChange={e => setForm(f => ({ ...f, emoji: e.target.value }))}
+                  style={{ width: '100%', padding: '5px 8px', fontSize: 12, border: '1px solid #e4dff0', borderRadius: 6, marginBottom: 6, boxSizing: 'border-box', outline: 'none' }} />
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button onClick={handleAdd} style={{ flex: 1, padding: '5px', background: '#6c4fa3', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>确认</button>
+                  <button onClick={() => { setShowAdd(false); setForm({ name: '', code: '', emoji: '' }) }}
+                    style={{ flex: 1, padding: '5px', background: '#eee', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>取消</button>
+                </div>
+              </div>
+            )}
+          </div>
         </nav>
       </aside>
 

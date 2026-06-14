@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useParams } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import Card, { CardTitle, StatCard } from '../components/Card'
@@ -6,12 +7,17 @@ import Button from '../components/Button'
 import Badge from '../components/Badge'
 import Modal, { FormRow, Input, Select, Textarea, ModalFooter } from '../components/Modal'
 import { getCheckins, upsertCheckin, getStudyGoals, createStudyGoal, getResources, createResource, deleteResource } from '../api'
+import { useLanguages } from '../App'
 
 const RESOURCE_TYPES = ['教材', '网站', '视频', 'App']
 
-export default function Language({ lang }: { lang: 'japanese' | 'english' }) {
-  const emoji = lang === 'japanese' ? '🇯🇵' : '🇬🇧'
-  const title = lang === 'japanese' ? '日语学习' : '英语学习'
+export default function Language() {
+  const { code } = useParams<{ code: string }>()
+  const lang = code || ''
+  const { languages } = useLanguages()
+  const langItem = languages.find(l => l.code === lang)
+  const emoji = langItem?.emoji || '🌐'
+  const title = langItem ? `${langItem.name}学习` : `${lang}学习`
   const today = dayjs()
 
   const [checkins, setCheckins] = useState<any[]>([])
@@ -172,7 +178,7 @@ export default function Language({ lang }: { lang: 'japanese' | 'english' }) {
 
       {showGoalModal && (
         <Modal title="设置学习目标" onClose={() => setShowGoalModal(false)}>
-          <FormRow label="目标名称 *"><Input value={gForm.name} onChange={v => setGForm(f => ({ ...f, name: v }))} placeholder={lang === 'japanese' ? '如：JLPT N1' : '如：英语六级'} /></FormRow>
+          <FormRow label="目标名称 *"><Input value={gForm.name} onChange={v => setGForm(f => ({ ...f, name: v }))} placeholder="如：JLPT N1、英语六级" /></FormRow>
           <FormRow label="目标日期"><Input type="date" value={gForm.target_date} onChange={v => setGForm(f => ({ ...f, target_date: v }))} /></FormRow>
           <FormRow label="当前进度备注"><Textarea value={gForm.progress_notes} onChange={v => setGForm(f => ({ ...f, progress_notes: v }))} rows={3} /></FormRow>
           <ModalFooter onClose={() => setShowGoalModal(false)} onSubmit={handleSaveGoal} />

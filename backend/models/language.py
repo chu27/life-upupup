@@ -3,6 +3,16 @@ from sqlalchemy.sql import func
 from database import Base
 
 
+class UserLanguage(Base):
+    __tablename__ = "user_languages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(50), nullable=False)    # 显示名称，如"日语"
+    code = Column(String(50), nullable=False, unique=True)  # 唯一标识，如"japanese"
+    emoji = Column(String(10), nullable=True)    # 如"🇯🇵"
+    created_at = Column(DateTime, server_default=func.now())
+
+
 class StudyCheckin(Base):
     __tablename__ = "study_checkins"
 

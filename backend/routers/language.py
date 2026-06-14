@@ -6,9 +6,51 @@ from typing import Optional
 from datetime import date
 
 from database import get_db
-from models.language import StudyCheckin, StudyGoal, StudyResource
+from models.language import StudyCheckin, StudyGoal, StudyResource, UserLanguage
 
 router = APIRouter(prefix="/api/language", tags=["language"])
+
+
+class UserLanguageCreate(BaseModel):
+    name: str
+    code: str
+    emoji: Optional[str] = None
+
+
+# ── 语言管理 ──────────────────────────────────────────
+@router.get("/list")
+def list_languages(db: Session = Depends(get_db)):
+    langs = db.query(UserLanguage).order_by(UserLanguage.id).all()
+    # 如果还没有任何语言，自动初始化日语和英语
+    if not langs:
+        defaults = [
+            UserLanguage(name="日语", code="japanese", emoji="🇯🇵"),
+            UserLanguage(name="英语", code="english", emoji="🇬🇧"),
+        ]
+        for d in defaults:
+            db.add(d)
+        db.commit()
+        langs = db.query(UserLanguage).order_by(UserLanguage.id).all()
+    return langs
+
+
+@router.post("/list")
+def add_language(data: UserLanguageCreate, db: Session = Depends(get_db)):
+    lang = UserLanguage(**data.dict())
+    db.add(lang)
+    db.commit()
+    db.refresh(lang)
+    return lang
+
+
+@router.delete("/list/{lang_id}")
+def delete_language(lang_id: int, db: Session = Depends(get_db)):
+    lang = db.query(UserLanguage).filter(UserLanguage.id == lang_id).first()
+    if not lang:
+        raise HTTPException(status_code=404, detail="Not found")
+    db.delete(lang)
+    db.commit()
+    return {"ok": True}
 
 
 class CheckinCreate(BaseModel):

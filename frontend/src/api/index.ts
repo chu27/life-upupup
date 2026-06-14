@@ -49,6 +49,11 @@ export const getStockNotes = () => api.get('/stock/notes').then(r => r.data)
 export const createStockNote = (data: any) => api.post('/stock/notes', data).then(r => r.data)
 export const getPriceRecords = (symbol: string) => api.get(`/stock/price-records/${symbol}`).then(r => r.data)
 
+// ── Language Management ────────────────────────────────
+export const getLanguageList = () => api.get('/language/list').then(r => r.data)
+export const addLanguage = (data: any) => api.post('/language/list', data).then(r => r.data)
+export const deleteLanguage = (id: number) => api.delete(`/language/list/${id}`)
+
 // ── Language ───────────────────────────────────────────
 export const getCheckins = (language: string, params?: any) =>
   api.get(`/language/${language}/checkins`, { params }).then(r => r.data)
