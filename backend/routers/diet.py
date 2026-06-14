@@ -6,7 +6,7 @@ from typing import Optional
 from datetime import date
 
 from database import get_db
-from models.diet import MealRecord, WaterRecord
+from models.diet import MealRecord, WaterRecord, SupplementLog
 
 router = APIRouter(prefix="/api/diet", tags=["diet"])
 
@@ -69,6 +69,11 @@ def ai_calculate_nutrition(meal_id: int):
 
 
 # ── 饮水 ──────────────────────────────────────────────
+@router.get("/water")
+def list_water(db: Session = Depends(get_db)):
+    return db.query(WaterRecord).order_by(WaterRecord.date.desc()).all()
+
+
 @router.get("/water/{date}")
 def get_water(date: date, db: Session = Depends(get_db)):
     record = db.query(WaterRecord).filter(WaterRecord.date == date).first()
@@ -87,3 +92,50 @@ def add_cup(date: date, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(record)
     return record
+
+
+@router.post("/water/remove-cup")
+def remove_cup(date: date, db: Session = Depends(get_db)):
+    record = db.query(WaterRecord).filter(WaterRecord.date == date).first()
+    if record and record.cups > 0:
+        record.cups -= 1
+        record.ml = max(0, record.ml - 250)
+        db.commit()
+        db.refresh(record)
+    return record or {"date": date, "cups": 0, "ml": 0}
+
+
+# ── 营养品 & 药物 ──────────────────────────────────────
+class SupplementCreate(BaseModel):
+    date: date
+    name: str
+    type: str          # 营养品 / 药物
+    dosage: Optional[str] = None
+    notes: Optional[str] = None
+
+
+@router.get("/supplements")
+def list_supplements(date: Optional[date] = None, db: Session = Depends(get_db)):
+    q = db.query(SupplementLog)
+    if date:
+        q = q.filter(SupplementLog.date == date)
+    return q.order_by(SupplementLog.date.desc(), SupplementLog.id).all()
+
+
+@router.post("/supplements")
+def create_supplement(data: SupplementCreate, db: Session = Depends(get_db)):
+    log = SupplementLog(**data.dict())
+    db.add(log)
+    db.commit()
+    db.refresh(log)
+    return log
+
+
+@router.delete("/supplements/{log_id}")
+def delete_supplement(log_id: int, db: Session = Depends(get_db)):
+    log = db.query(SupplementLog).filter(SupplementLog.id == log_id).first()
+    if not log:
+        raise HTTPException(status_code=404, detail="Not found")
+    db.delete(log)
+    db.commit()
+    return {"ok": True}

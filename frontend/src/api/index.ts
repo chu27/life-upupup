@@ -70,7 +70,12 @@ export const createMeal = (data: any) => api.post('/diet/meals', data).then(r =>
 export const updateMeal = (id: number, data: any) => api.put(`/diet/meals/${id}`, data).then(r => r.data)
 export const deleteMeal = (id: number) => api.delete(`/diet/meals/${id}`)
 export const getWater = (date: string) => api.get(`/diet/water/${date}`).then(r => r.data)
+export const getAllWater = () => api.get('/diet/water').then(r => r.data)
 export const addCup = (date: string) => api.post('/diet/water/add-cup', null, { params: { date } }).then(r => r.data)
+export const removeCup = (date: string) => api.post('/diet/water/remove-cup', null, { params: { date } }).then(r => r.data)
+export const getSupplements = (date?: string) => api.get('/diet/supplements', { params: date ? { date } : {} }).then(r => r.data)
+export const createSupplement = (data: any) => api.post('/diet/supplements', data).then(r => r.data)
+export const deleteSupplement = (id: number) => api.delete(`/diet/supplements/${id}`)
 
 // ── Tasks ──────────────────────────────────────────────
 export const getTasks = (period: string, dateKey: string) =>

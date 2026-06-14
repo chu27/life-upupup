@@ -30,3 +30,15 @@ class WaterRecord(Base):
     cups = Column(Integer, default=0)
     ml = Column(Integer, default=0)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
+class SupplementLog(Base):
+    __tablename__ = "supplement_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    date = Column(Date, nullable=False)
+    name = Column(String(100), nullable=False)       # 如：维生素D、鱼油、布洛芬
+    type = Column(String(20), nullable=False)        # 营养品 / 药物
+    dosage = Column(String(100), nullable=True)      # 如：1粒、500mg
+    notes = Column(String(300), nullable=True)
+    created_at = Column(DateTime, server_default=func.now())

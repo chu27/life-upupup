@@ -44,7 +44,7 @@ export default function Body() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div style={{ fontSize: 22, fontWeight: 700 }}>⚖️ 身材管理</div>
-        <Button onClick={() => { setForm({ date: dayjs().format('YYYY-MM-DD'), weight: '', waist: '', chest: '', hip: '', arm: '', leg: '' }); setShowModal(true) }}>+ 记录今日数据</Button>
+        <Button onClick={() => { setForm({ date: dayjs().format('YYYY-MM-DD'), weight: '', waist: '', chest: '', hip: '', arm: '', leg: '' }); setShowModal(true) }}>+ 记录数据</Button>
       </div>
 
       {/* Latest snapshot */}
