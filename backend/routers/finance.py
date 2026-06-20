@@ -16,7 +16,7 @@ router = APIRouter(prefix="/api/finance", tags=["finance"])
 @router.get("/exchange-rates")
 def get_exchange_rates():
     try:
-        resp = requests.get("https://api.frankfurter.app/latest?from=JPY&to=USD,CNY", timeout=5)
+        resp = requests.get("https://api.frankfurter.dev/v1/latest?from=JPY&to=USD,CNY", timeout=5)
         return resp.json()
     except Exception:
         return {"error": "汇率获取失败，请手动设置"}

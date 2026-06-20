@@ -26,7 +26,7 @@ export default function Dashboard() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
-          <div style={{ fontSize: 18, fontWeight: 500, lineHeight: 1.6 }}>只要你这样认真的做下去，早晚有一天，你想要的东西都会属于你 🌿</div>
+          <div style={{ fontSize: 18, fontWeight: 500, lineHeight: 1.6 }}>只要你这样认真的做下去，早晚有一天，你想要的东西都会属于你 👸</div>
           <div style={{ fontSize: 13, color: '#999', marginTop: 2 }}>
             {dayjs().format('YYYY年M月D日 · dddd')}
           </div>

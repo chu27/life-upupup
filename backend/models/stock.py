@@ -14,6 +14,8 @@ class Holding(Base):
     buy_date = Column(Date, nullable=False)
     sell_price = Column(Float, nullable=True)
     sell_date = Column(Date, nullable=True)
+    status = Column(String(10), default='已买')   # 已买 / 观察
+    notes = Column(Text, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
 
 

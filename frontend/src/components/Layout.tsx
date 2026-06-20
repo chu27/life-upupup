@@ -16,14 +16,15 @@ const staticNav = [
   { group: '自我提升', items: [
     { to: '/books', icon: '📚', label: '读书' },
     { to: '/documentaries', icon: '🎬', label: '纪录片' },
-    { to: '/stock', icon: '📈', label: '股票' },
+    { to: '/stock', icon: '📈', label: '股票池' },
   ]},
-  { group: '身体 & 饮食', items: [
+  { group: '生活记录', items: [
     { to: '/body', icon: '⚖️', label: '身材管理' },
     { to: '/diet', icon: '🥗', label: '饮食管理' },
+    { to: '/grocery', icon: '🛒', label: '价格管理' },
+    { to: '/finance/transactions', icon: '💰', label: '收入 & 支出' },
   ]},
   { group: '财务', items: [
-    { to: '/finance/transactions', icon: '💰', label: '收入 & 支出' },
     { to: '/finance/assets', icon: '🏦', label: '资产总览' },
     { to: '/finance/investment', icon: '📊', label: '投资记录' },
     { to: '/finance/investment/us', icon: '🇺🇸', label: '美股', indent: true },
@@ -71,7 +72,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         display: 'flex', flexDirection: 'column', flexShrink: 0, overflowY: 'auto',
       }}>
         <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid #e4dff0' }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#6c4fa3' }}>🌿 我的生活</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#6c4fa3' }}>🌹 我的生活</div>
           <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>Personal Life Manager</div>
         </div>
 

@@ -7,6 +7,7 @@ import Books from './pages/Books'
 import Documentaries from './pages/Documentaries'
 import Body from './pages/Body'
 import Diet from './pages/Diet'
+import Grocery from './pages/Grocery'
 import FinanceTransactions from './pages/FinanceTransactions'
 import FinanceAssets from './pages/FinanceAssets'
 import Investment from './pages/Investment'
@@ -42,6 +43,7 @@ export default function App() {
             <Route path="/documentaries" element={<Documentaries />} />
             <Route path="/body" element={<Body />} />
             <Route path="/diet" element={<Diet />} />
+            <Route path="/grocery" element={<Grocery />} />
             <Route path="/finance/transactions" element={<FinanceTransactions />} />
             <Route path="/finance/assets" element={<FinanceAssets />} />
             <Route path="/finance/investment" element={<Investment />} />

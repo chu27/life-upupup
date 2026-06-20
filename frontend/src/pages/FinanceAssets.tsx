@@ -14,6 +14,7 @@ const TYPE_COLORS = ['#6c4fa3', '#a07fd4', '#d4c9f0', '#c084fc', '#9c27b0', '#7b
 const CCY_PIE: Record<string, string> = { JPY: '#f97316', USD: '#22c55e', CNY: '#ef4444' }
 
 function MiniPie({ data, title, unit }: { data: { name: string; value: number }[]; title: string; unit: string }) {
+  const total = data.reduce((s, d) => s + d.value, 0)
   if (data.length === 0) return (
     <Card>
       <CardTitle>{title}</CardTitle>
@@ -23,6 +24,9 @@ function MiniPie({ data, title, unit }: { data: { name: string; value: number }[
   return (
     <Card>
       <CardTitle>{title}</CardTitle>
+      <div style={{ fontSize: 18, fontWeight: 700, color: '#333', marginBottom: 2 }}>
+        {total.toLocaleString()} <span style={{ fontSize: 12, color: '#999', fontWeight: 400 }}>{unit}</span>
+      </div>
       <ResponsiveContainer width="100%" height={170}>
         <PieChart>
           <Pie data={data} cx="50%" cy="50%" outerRadius={50} dataKey="value"
@@ -153,7 +157,7 @@ export default function FinanceAssets() {
         <Button onClick={openAdd}>+ 添加资产</Button>
       </div>
 
-      {rates && (
+      {rates?.rates && (
         <div style={{ fontSize: 12, color: '#aaa', marginBottom: 14 }}>
           参考汇率（{now.format('MM-DD')} 更新）：1 USD ≈ ¥{(1 / rates.rates.USD).toFixed(1)} · 1 CNY ≈ ¥{(1 / rates.rates.CNY).toFixed(1)}
         </div>

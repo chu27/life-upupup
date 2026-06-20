@@ -5,12 +5,12 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import Card, { CardTitle } from '../components/Card'
 import Button from '../components/Button'
 import Modal, { FormRow, Input, Select, ModalFooter } from '../components/Modal'
-import { getInvestmentItems, createInvestmentItem, updateInvestmentItem, deleteInvestmentItem, upsertInvestmentLog, getInvestmentSummary, getInvestmentLogs, getCategoryPnl } from '../api'
+import { getInvestmentItems, createInvestmentItem, updateInvestmentItem, deleteInvestmentItem, upsertInvestmentLog, getInvestmentSummary, getInvestmentLogs, getCategoryPnl, autoFillTodayInvestment } from '../api'
 
 const CCY_SYMBOL: Record<string, string> = { JPY: '¥', USD: '$', CNY: '¥' }
 const CCY_LABEL: Record<string, string> = { JPY: '日元', USD: '美元', CNY: '人民币' }
 const CAT_ICON: Record<string, string> = { '美股': '🇺🇸', '日股': '🇯🇵', 'A股': '🇨🇳', '基金': '📈' }
-const CAT_CCY: Record<string, string> = { '美股': 'USD', '日股': 'JPY', 'A股': 'CNY', '基金': 'JPY' }
+const CAT_CCY: Record<string, string> = { '美股': 'USD', '日股': 'JPY', 'A股': 'CNY', '基金': 'CNY' }
 
 const CATEGORIES = ['美股', '日股', 'A股', '基金']
 
@@ -19,25 +19,51 @@ const CAT_PATH: Record<string, string> = { '美股': '/finance/investment/us', '
 function InvestmentOverview() {
   const today = dayjs().format('YYYY-MM-DD')
   const navigate = useNavigate()
+  const [selectedDate, setSelectedDate] = useState(today)
   const [summaries, setSummaries] = useState<Record<string, any[]>>({})
   const [pnlHistory, setPnlHistory] = useState<Record<string, any[]>>({})
 
-  useEffect(() => {
-    Promise.all(CATEGORIES.map(cat => getInvestmentSummary(today, cat))).then(results => {
+  const loadSummaries = (date: string) => {
+    Promise.all(CATEGORIES.map(cat => getInvestmentSummary(date, cat))).then(results => {
       const s: Record<string, any[]> = {}
       CATEGORIES.forEach((cat, i) => { s[cat] = results[i] })
       setSummaries(s)
     })
-    Promise.all(CATEGORIES.map(cat => getCategoryPnl(cat))).then(results => {
-      const h: Record<string, any[]> = {}
-      CATEGORIES.forEach((cat, i) => { h[cat] = results[i] })
-      setPnlHistory(h)
+  }
+
+  useEffect(() => {
+    autoFillTodayInvestment().finally(() => {
+      loadSummaries(selectedDate)
+      Promise.all(CATEGORIES.map(cat => getCategoryPnl(cat))).then(results => {
+        const h: Record<string, any[]> = {}
+        CATEGORIES.forEach((cat, i) => { h[cat] = results[i] })
+        setPnlHistory(h)
+      })
     })
   }, [])
 
+  const handleDateChange = (d: string) => {
+    setSelectedDate(d)
+    loadSummaries(d)
+  }
+
   return (
     <div>
-      <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 20 }}>📊 投资记录</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        <div style={{ fontSize: 22, fontWeight: 700 }}>📊 投资记录</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 12, color: '#999' }}>查看日期</span>
+          <input type="date" value={selectedDate} max={today}
+            onChange={e => handleDateChange(e.target.value)}
+            style={{ fontSize: 13, border: '1px solid #e4dff0', borderRadius: 8, padding: '5px 10px', color: '#444', outline: 'none', cursor: 'pointer' }} />
+          {selectedDate !== today && (
+            <button onClick={() => handleDateChange(today)}
+              style={{ fontSize: 12, padding: '5px 10px', background: '#ede8f7', color: '#6c4fa3', border: 'none', borderRadius: 8, cursor: 'pointer' }}>
+              回到今天
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* 各分类当日盈亏 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 24 }}>
@@ -45,6 +71,7 @@ function InvestmentOverview() {
           const rows = summaries[cat] || []
           const pnl = rows.reduce((s: number, r: any) => s + (r.pnl || 0), 0)
           const hasData = rows.some((r: any) => r.pnl != null)
+          const isToday = selectedDate === today
           return (
             <div key={cat} onClick={() => navigate(CAT_PATH[cat])} style={{
               padding: '16px 18px', borderRadius: 12, background: '#fff',
@@ -55,9 +82,11 @@ function InvestmentOverview() {
             onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 20px rgba(108,79,163,.18)')}
             onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 2px 12px rgba(108,79,163,.08)')}
             >
-              <div style={{ fontSize: 12, color: '#999', marginBottom: 6 }}>{CAT_ICON[cat]} {cat} · 当日盈亏</div>
+              <div style={{ fontSize: 12, color: '#999', marginBottom: 6 }}>
+                {CAT_ICON[cat]} {cat} · {isToday ? '当日盈亏' : `${selectedDate.slice(5)} 盈亏`}
+              </div>
               <div style={{ fontSize: 22, fontWeight: 700, color: pnl >= 0 ? '#e63946' : '#22c55e' }}>
-                {hasData ? `${pnl >= 0 ? '+' : ''}${pnl.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : '—'}
+                {hasData ? `${pnl >= 0 ? '+' : ''}${pnl.toLocaleString(undefined, { maximumFractionDigits: 0 })} ${CAT_CCY[cat]}` : '—'}
               </div>
               <div style={{ fontSize: 11, color: '#aaa', marginTop: 4 }}>{CCY_LABEL[CAT_CCY[cat]]} · {rows.length} 项</div>
             </div>
@@ -68,21 +97,27 @@ function InvestmentOverview() {
       {/* 各分类折线图 */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         {CATEGORIES.map(cat => {
-          const history = (pnlHistory[cat] || []).filter((d: any) => d.pnl != null)
+          const raw = (pnlHistory[cat] || []).filter((d: any) => d.pnl != null)
+          // 累计盈亏：每个点 = 从第一条记录到该日的总盈亏
+          let cum = 0
+          const history = raw.map((d: any) => {
+            cum += d.pnl
+            return { ...d, cumPnl: Math.round(cum) }
+          })
           return (
             <Card key={cat}>
-              <CardTitle>{CAT_ICON[cat]} {cat} · 每日盈亏</CardTitle>
-              {history.length < 2
-                ? <div style={{ height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#aaa', fontSize: 13 }}>数据不足（至少需要2天记录）</div>
+              <CardTitle>{CAT_ICON[cat]} {cat} · 累计盈亏</CardTitle>
+              {history.length < 1
+                ? <div style={{ height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#aaa', fontSize: 13 }}>暂无数据</div>
                 : <ResponsiveContainer width="100%" height={150}>
                     <LineChart data={history} margin={{ top: 20, right: 12, left: 0, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#999' }} tickFormatter={d => d.slice(5)} />
                       <YAxis tick={{ fontSize: 10, fill: '#999' }} width={60} tickFormatter={v => v.toLocaleString()} />
                       <ReferenceLine y={0} stroke="#bbb" />
-                      <Tooltip formatter={(v: any) => [(v >= 0 ? '+' : '') + Number(v).toLocaleString(), '盈亏']} />
-                      <Line type="monotone" dataKey="pnl" stroke="#6c4fa3" strokeWidth={2} dot={{ r: 3, fill: '#6c4fa3' }}>
-                        <LabelList dataKey="pnl" position="top" fontSize={10} fill="#555"
+                      <Tooltip formatter={(v: any) => [(v >= 0 ? '+' : '') + Number(v).toLocaleString(), '累计盈亏']} />
+                      <Line type="monotone" dataKey="cumPnl" stroke="#6c4fa3" strokeWidth={2} dot={{ r: 3, fill: '#6c4fa3' }}>
+                        <LabelList dataKey="cumPnl" position="top" fontSize={10} fill="#555"
                           formatter={(v: any) => (v >= 0 ? '+' : '') + Number(v).toLocaleString()} />
                       </Line>
                     </LineChart>
@@ -143,12 +178,13 @@ export default function Investment({ category }: { category?: string }) {
     if (chartItemId == null) return
     getInvestmentLogs(chartItemId).then(data => {
       const sorted = [...data].sort((a: any, b: any) => a.date.localeCompare(b.date))
-      // 计算每日盈亏（当日 - 前一日）
-      const result = sorted.map((log: any, i: number) => ({
-        date: log.date.slice(5), // MM-DD
-        amount: log.amount,
-        pnl: i > 0 ? log.amount - sorted[i - 1].amount - (log.capital_change || 0) : 0,
-      }))
+      // 计算累计盈亏
+      let cum = 0
+      const result = sorted.map((log: any, i: number) => {
+        const daily = i > 0 ? log.amount - sorted[i - 1].amount - (log.capital_change || 0) : 0
+        cum += daily
+        return { date: log.date.slice(5), cumPnl: Math.round(cum) }
+      })
       setChartLogs(result)
     })
   }, [chartItemId])
@@ -312,21 +348,21 @@ export default function Investment({ category }: { category?: string }) {
             </tbody>
           </table>
 
-          {/* 每日盈亏折线图 */}
+          {/* 累计盈亏折线图 */}
           {chartItemId != null && rows.find(r => r.id === chartItemId) && chartLogs.length > 1 && (
             <div style={{ marginTop: 16 }}>
               <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: '#555' }}>
-                {rows.find(r => r.id === chartItemId)?.name} · 每日盈亏
+                {rows.find(r => r.id === chartItemId)?.name} · 累计盈亏
               </div>
               <ResponsiveContainer width="100%" height={180}>
-                <LineChart data={chartLogs.slice(1)} margin={{ top: 24, right: 16, left: 0, bottom: 0 }}>
+                <LineChart data={chartLogs} margin={{ top: 24, right: 16, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#999' }} />
                   <YAxis tick={{ fontSize: 11, fill: '#999' }} width={70} tickFormatter={v => v.toLocaleString()} />
                   <ReferenceLine y={0} stroke="#bbb" />
-                  <Tooltip formatter={(v: any) => [(v >= 0 ? '+' : '') + Number(v).toLocaleString(), '盈亏']} />
-                  <Line type="monotone" dataKey="pnl" stroke="#6c4fa3" strokeWidth={2} dot={{ r: 4, fill: '#6c4fa3' }} name="当日盈亏">
-                    <LabelList dataKey="pnl" position="top" fontSize={11} fill="#555"
+                  <Tooltip formatter={(v: any) => [(v >= 0 ? '+' : '') + Number(v).toLocaleString(), '累计盈亏']} />
+                  <Line type="monotone" dataKey="cumPnl" stroke="#6c4fa3" strokeWidth={2} dot={{ r: 4, fill: '#6c4fa3' }} name="累计盈亏">
+                    <LabelList dataKey="cumPnl" position="top" fontSize={11} fill="#555"
                       formatter={(v: any) => (v >= 0 ? '+' : '') + Number(v).toLocaleString()} />
                   </Line>
                 </LineChart>

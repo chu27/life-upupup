@@ -39,9 +39,14 @@ export const updateGoal = (id: number, data: any) => api.put(`/finance/goals/${i
 export const getExchangeRates = () => api.get('/finance/exchange-rates').then(r => r.data)
 
 // ── Stock ──────────────────────────────────────────────
-export const getStockQuote = (symbol: string) => api.get(`/stock/quote/${symbol}`).then(r => r.data)
+export const getStockQuote = (symbol: string, targetDate?: string) =>
+  api.get(`/stock/quote/${symbol}`, { params: targetDate ? { target_date: targetDate } : {} }).then(r => r.data)
+export const getHiLowDistribution = (symbol: string, days = 30) =>
+  api.get(`/stock/highlow-distribution/${symbol}`, { params: { days } }).then(r => r.data)
 export const getHoldings = () => api.get('/stock/holdings').then(r => r.data)
 export const createHolding = (data: any) => api.post('/stock/holdings', data).then(r => r.data)
+export const updateHolding = (id: number, data: any) => api.put(`/stock/holdings/${id}`, data).then(r => r.data)
+export const deleteHolding = (id: number) => api.delete(`/stock/holdings/${id}`)
 export const getWatchlist = () => api.get('/stock/watchlist').then(r => r.data)
 export const addWatchlist = (data: any) => api.post('/stock/watchlist', data).then(r => r.data)
 export const removeWatchlist = (id: number) => api.delete(`/stock/watchlist/${id}`)
@@ -87,6 +92,14 @@ export const upsertInvestmentLog = (data: any) => api.post('/investment/logs', d
 export const getInvestmentSummary = (date?: string, category?: string) => api.get('/investment/summary', { params: { ...(date ? { target_date: date } : {}), ...(category ? { category } : {}) } }).then(r => r.data)
 export const getCategoryPnl = (category: string) => api.get('/investment/category-pnl', { params: { category } }).then(r => r.data)
 export const getInvestmentDailyTotals = (date?: string) => api.get('/investment/daily-totals', { params: date ? { target_date: date } : {} }).then(r => r.data)
+export const autoFillTodayInvestment = () => api.post('/investment/auto-fill-today').then(r => r.data)
+
+// ── Grocery ────────────────────────────────────────────
+export const getGroceryPrices = (name?: string, category?: string) => api.get('/grocery/prices', { params: { ...(name ? { name } : {}), ...(category ? { category } : {}) } }).then(r => r.data)
+export const createGroceryPrice = (data: any) => api.post('/grocery/prices', data).then(r => r.data)
+export const updateGroceryPrice = (id: number, data: any) => api.put(`/grocery/prices/${id}`, data).then(r => r.data)
+export const deleteGroceryPrice = (id: number) => api.delete(`/grocery/prices/${id}`)
+export const getGroceryNames = () => api.get('/grocery/names').then(r => r.data)
 
 // ── Tasks ──────────────────────────────────────────────
 export const getTasks = (period: string, dateKey: string) =>

@@ -12,7 +12,7 @@ import models.diet
 import models.tasks
 import models.investment
 
-from routers import books, documentaries, body, finance, stock, language, diet, tasks, dashboard, investment
+from routers import books, documentaries, body, finance, stock, language, diet, tasks, dashboard, investment, grocery
 
 # 启动时自动建表
 Base.metadata.create_all(bind=engine)
@@ -37,6 +37,7 @@ app.include_router(diet.router)
 app.include_router(tasks.router)
 app.include_router(dashboard.router)
 app.include_router(investment.router)
+app.include_router(grocery.router)
 
 
 @app.get("/")

@@ -95,7 +95,11 @@ def upsert_log(data: LogCreate, db: Session = Depends(get_db)):
 
 @router.get("/category-pnl")
 def get_category_pnl(category: str, db: Session = Depends(get_db)):
-    """返回某分类下所有投资项按日期聚合的总金额，计算每日盈亏"""
+    """返回某分类下所有投资项按日期聚合的总金额，计算每日盈亏。
+    新增项第一条记录自动视为资金投入（不计入盈亏），避免初始金额被误算成收益。
+    """
+    from collections import defaultdict
+
     items = db.query(InvestmentItem).filter(InvestmentItem.category == category).all()
     if not items:
         return []
@@ -104,26 +108,46 @@ def get_category_pnl(category: str, db: Session = Depends(get_db)):
         InvestmentLog.item_id.in_(item_ids)
     ).order_by(InvestmentLog.date).all()
 
-    # 按日期聚合总金额和资金变动
-    daily_amount: dict = {}
-    daily_capital: dict = {}
-    for log in logs:
-        d = str(log.date)
-        daily_amount[d] = daily_amount.get(d, 0) + log.amount
-        daily_capital[d] = daily_capital.get(d, 0) + (log.capital_change or 0)
+    if not logs:
+        return []
 
-    sorted_dates = sorted(daily_amount.keys())
+    # 每个 item 的第一条记录日期
+    item_first_date: dict = {}
+    for log in logs:
+        if log.item_id not in item_first_date or log.date < item_first_date[log.item_id]:
+            item_first_date[log.item_id] = log.date
+
+    # 按日期建索引：date -> [log, ...]
+    logs_by_date: dict = defaultdict(list)
+    for log in logs:
+        logs_by_date[log.date].append(log)
+
+    all_dates = sorted(logs_by_date.keys())
+
     result = []
-    for i, d in enumerate(sorted_dates):
-        prev = daily_amount[sorted_dates[i - 1]] if i > 0 else None
-        cap = daily_capital.get(d, 0)
-        pnl = round(daily_amount[d] - prev - cap, 2) if prev is not None else None
+    prev_total = None
+    last_amount: dict = {}   # item_id -> 最近已知金额（用于carry-forward）
+
+    for d in all_dates:
+        day_capital = 0.0
+        for log in logs_by_date[d]:
+            last_amount[log.item_id] = log.amount
+            cap = log.capital_change or 0.0
+            # 第一条记录：初始金额视为资金投入，不算盈亏
+            if d == item_first_date[log.item_id] and cap == 0.0:
+                cap += log.amount
+            day_capital += cap
+
+        total = sum(last_amount.values())
+        pnl = round(total - prev_total - day_capital, 2) if prev_total is not None else None
         result.append({
-            "date": d,
-            "total": daily_amount[d],
-            "capital_change": cap,
+            "date": str(d),
+            "total": round(total, 2),
+            "capital_change": round(day_capital, 2),
             "pnl": pnl,
         })
+        prev_total = total
+
     return result
 
 
@@ -163,6 +187,35 @@ def get_daily_totals(db: Session = Depends(get_db)):
     for cat in result:
         result[cat] = {ccy: round(v, 2) for ccy, v in result[cat].items()}
     return result
+
+
+# ── 自动补今日记录 ──────────────────────────────────────
+@router.post("/auto-fill-today")
+def auto_fill_today(db: Session = Depends(get_db)):
+    """
+    对所有今日尚无记录的投资条目，取该条目最近一条历史记录的金额，
+    自动写入今日记录（capital_change=0），实现「昨日价格延续」。
+    """
+    today = date.today()
+    items = db.query(InvestmentItem).all()
+    filled = []
+    for item in items:
+        has_today = db.query(InvestmentLog).filter(
+            InvestmentLog.item_id == item.id,
+            InvestmentLog.date == today
+        ).first()
+        if has_today:
+            continue
+        latest = db.query(InvestmentLog).filter(
+            InvestmentLog.item_id == item.id,
+            InvestmentLog.date < today
+        ).order_by(desc(InvestmentLog.date)).first()
+        if latest:
+            log = InvestmentLog(item_id=item.id, date=today, amount=latest.amount, capital_change=0.0)
+            db.add(log)
+            filled.append(item.name)
+    db.commit()
+    return {"filled": filled, "count": len(filled)}
 
 
 # ── 盈亏汇总（今日 vs 昨日） ──────────────────────────
