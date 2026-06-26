@@ -4,11 +4,62 @@ import dayjs from 'dayjs'
 import Card, { StatCard } from '../components/Card'
 import { getDashboard, getTasks, toggleTask } from '../api'
 
+const ALL_SHORTCUTS = [
+  { icon: '📚', label: '读书', to: '/books' },
+  { icon: '🎬', label: '纪录片', to: '/documentaries' },
+  { icon: '⚖️', label: '身材管理', to: '/body' },
+  { icon: '🥗', label: '饮食管理', to: '/diet' },
+  { icon: '🛒', label: '价格管理', to: '/grocery' },
+  { icon: '💰', label: '收入&支出', to: '/finance' },
+  { icon: '🏦', label: '资产总览', to: '/finance/assets' },
+  { icon: '📊', label: '投资记录', to: '/finance/investment' },
+  { icon: '📈', label: '股票池', to: '/stock' },
+  { icon: '🇯🇵', label: '日语', to: '/language/japanese' },
+  { icon: '🇰🇷', label: '韩语', to: '/language/korean' },
+  { icon: '🇬🇧', label: '英语', to: '/language/english' },
+  { icon: '✅', label: '今日任务', to: '/tasks/today' },
+  { icon: '📅', label: '本周任务', to: '/tasks/week' },
+  { icon: '🗓️', label: '本月任务', to: '/tasks/month' },
+  { icon: '📆', label: '本年任务', to: '/tasks/year' },
+]
+
+const LS_KEY = 'quick_shortcuts'
+const DEFAULT_SHORTCUTS = [
+  { icon: '📚', label: '读书', to: '/books' },
+  { icon: '⚖️', label: '身材管理', to: '/body' },
+  { icon: '🥗', label: '饮食管理', to: '/diet' },
+  { icon: '💰', label: '收入&支出', to: '/finance' },
+  { icon: '📈', label: '股票池', to: '/stock' },
+  { icon: '🇯🇵', label: '日语', to: '/language/japanese' },
+]
+
+function loadShortcuts() {
+  try {
+    const s = localStorage.getItem(LS_KEY)
+    return s ? JSON.parse(s) : DEFAULT_SHORTCUTS
+  } catch { return DEFAULT_SHORTCUTS }
+}
+
 export default function Dashboard() {
   const [data, setData] = useState<any>(null)
   const [tasks, setTasks] = useState<any[]>([])
+  const [shortcuts, setShortcuts] = useState<any[]>(loadShortcuts)
+  const [editing, setEditing] = useState(false)
   const today = dayjs().format('YYYY-MM-DD')
   const nav = useNavigate()
+
+  const saveShortcuts = (list: any[]) => {
+    setShortcuts(list)
+    localStorage.setItem(LS_KEY, JSON.stringify(list))
+  }
+  const toggleShortcut = (item: any) => {
+    const exists = shortcuts.some(s => s.to === item.to)
+    if (exists) {
+      saveShortcuts(shortcuts.filter(s => s.to !== item.to))
+    } else if (shortcuts.length < 6) {
+      saveShortcuts([...shortcuts, item])
+    }
+  }
 
   useEffect(() => {
     getDashboard().then(setData)
@@ -114,25 +165,49 @@ export default function Dashboard() {
 
         {/* Quick links */}
         <Card>
-          <div style={{ fontSize: 12, fontWeight: 600, color: '#888', textTransform: 'uppercase', marginBottom: 14 }}>快速入口</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
-            {[
-              { icon: '📚', label: '记录读书', to: '/books' },
-              { icon: '⚖️', label: '记录体重', to: '/body' },
-              { icon: '🥗', label: '记录餐食', to: '/diet' },
-              { icon: '💰', label: '记录收支', to: '/finance' },
-              { icon: '📈', label: '查看股票', to: '/stock' },
-              { icon: '🇯🇵', label: '日语打卡', to: '/japanese' },
-            ].map(item => (
-              <div key={item.to} onClick={() => nav(item.to)} style={{
-                padding: '12px 8px', background: '#f5f3fa', borderRadius: 8,
-                textAlign: 'center', cursor: 'pointer', fontSize: 12, color: '#555',
-              }}>
-                <div style={{ fontSize: 22, marginBottom: 4 }}>{item.icon}</div>
-                {item.label}
-              </div>
-            ))}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#888', textTransform: 'uppercase' }}>快速入口</div>
+            <span onClick={() => setEditing(e => !e)}
+              style={{ fontSize: 12, color: '#6c4fa3', cursor: 'pointer', fontWeight: 600 }}>
+              {editing ? '完成' : '编辑'}
+            </span>
           </div>
+
+          {!editing ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
+              {shortcuts.map(item => (
+                <div key={item.to} onClick={() => nav(item.to)} style={{
+                  padding: '12px 8px', background: '#f5f3fa', borderRadius: 8,
+                  textAlign: 'center', cursor: 'pointer', fontSize: 12, color: '#555',
+                }}>
+                  <div style={{ fontSize: 22, marginBottom: 4 }}>{item.icon}</div>
+                  {item.label}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div>
+              <div style={{ fontSize: 11, color: '#aaa', marginBottom: 10 }}>最多选 6 个，已选 {shortcuts.length}/6</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
+                {ALL_SHORTCUTS.map(item => {
+                  const selected = shortcuts.some(s => s.to === item.to)
+                  return (
+                    <div key={item.to} onClick={() => toggleShortcut(item)} style={{
+                      padding: '10px 6px', borderRadius: 8, textAlign: 'center', cursor: 'pointer',
+                      fontSize: 12, color: selected ? '#6c4fa3' : '#888',
+                      background: selected ? '#ede8f7' : '#f5f5f5',
+                      border: `1.5px solid ${selected ? '#6c4fa3' : 'transparent'}`,
+                      opacity: !selected && shortcuts.length >= 6 ? 0.4 : 1,
+                    }}>
+                      <div style={{ fontSize: 20, marginBottom: 3 }}>{item.icon}</div>
+                      {item.label}
+                      {selected && <div style={{ fontSize: 10, color: '#6c4fa3', marginTop: 2 }}>✓</div>}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </Card>
       </div>
     </div>

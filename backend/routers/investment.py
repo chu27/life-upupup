@@ -7,8 +7,34 @@ from datetime import date, timedelta
 
 from database import get_db
 from models.investment import InvestmentItem, InvestmentLog
+from models.finance import Asset
 
 router = APIRouter(prefix="/api/investment", tags=["investment"])
+
+# 投资分类 → 关联现金账户名称（加钱时该现金账户减少，提现时增加）
+CATEGORY_CASH_ACCOUNT = {
+    "A股": "股票现金",
+    "基金": "支付宝活期",
+    "美股": "SBI美元账户",
+    "日股": "sbi日元账户",
+}
+
+
+def _sync_cash_account(db: Session, item_id: int, cap_delta: float):
+    """资金变动联动现金账户：现金账户变化 = -（资金变动差额）。
+    加钱(+)使现金减少，提现(-)使现金增加。"""
+    if not cap_delta:
+        return
+    item = db.query(InvestmentItem).filter(InvestmentItem.id == item_id).first()
+    if not item:
+        return
+    acc_name = CATEGORY_CASH_ACCOUNT.get(item.category)
+    if not acc_name:
+        return
+    acc = db.query(Asset).filter(Asset.name == acc_name).first()
+    if not acc:
+        return
+    acc.amount = round((acc.amount or 0) - cap_delta, 2)
 
 
 class ItemCreate(BaseModel):
@@ -76,18 +102,26 @@ def list_logs(item_id: Optional[int] = None, db: Session = Depends(get_db)):
 
 @router.post("/logs")
 def upsert_log(data: LogCreate, db: Session = Depends(get_db)):
-    existing = db.query(InvestmentLog).filter(
+    # 查所有同 item+date 记录，删除多余，只保留并更新一条
+    all_existing = db.query(InvestmentLog).filter(
         InvestmentLog.item_id == data.item_id,
         InvestmentLog.date == data.date
-    ).first()
-    if existing:
+    ).order_by(InvestmentLog.id).all()
+    if all_existing:
+        for rec in all_existing[:-1]:  # 删除较旧的，保留最后一条
+            db.delete(rec)
+        existing = all_existing[-1]
+        old_cap = existing.capital_change or 0.0
         existing.amount = data.amount
         existing.capital_change = data.capital_change
+        # 只按差额联动现金账户（避免编辑时重复扣款）
+        _sync_cash_account(db, data.item_id, (data.capital_change or 0.0) - old_cap)
         db.commit()
         db.refresh(existing)
         return existing
     log = InvestmentLog(**data.dict())
     db.add(log)
+    _sync_cash_account(db, data.item_id, data.capital_change or 0.0)
     db.commit()
     db.refresh(log)
     return log
@@ -117,9 +151,16 @@ def get_category_pnl(category: str, db: Session = Depends(get_db)):
         if log.item_id not in item_first_date or log.date < item_first_date[log.item_id]:
             item_first_date[log.item_id] = log.date
 
+    # 按 (item_id, date) 去重，保留 id 最大的一条
+    best: dict = {}
+    for log in logs:
+        key = (log.item_id, log.date)
+        if key not in best or log.id > best[key].id:
+            best[key] = log
+
     # 按日期建索引：date -> [log, ...]
     logs_by_date: dict = defaultdict(list)
-    for log in logs:
+    for log in best.values():
         logs_by_date[log.date].append(log)
 
     all_dates = sorted(logs_by_date.keys())
@@ -156,6 +197,8 @@ def delete_log(log_id: int, db: Session = Depends(get_db)):
     log = db.query(InvestmentLog).filter(InvestmentLog.id == log_id).first()
     if not log:
         raise HTTPException(status_code=404, detail="Not found")
+    # 撤销该条资金变动对现金账户的影响
+    _sync_cash_account(db, log.item_id, -(log.capital_change or 0.0))
     db.delete(log)
     db.commit()
     return {"ok": True}

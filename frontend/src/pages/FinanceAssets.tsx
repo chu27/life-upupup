@@ -214,48 +214,63 @@ export default function FinanceAssets() {
       {/* 资产明细 */}
       <Card>
         <CardTitle>资产明细</CardTitle>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-          <thead>
-            <tr>{['资产名称', '类型', '金额', '折合日元', '最后修改', '操作'].map(h =>
-              <th key={h} style={{ textAlign: 'left', padding: '8px 12px', fontSize: 11, color: '#999', borderBottom: '1px solid #f0f0f0' }}>{h}</th>
-            )}</tr>
-          </thead>
-          <tbody>
-            {assets.map(a => (
-              <tr key={a.id} onClick={() => openEdit(a)} style={{ cursor: 'pointer' }}
-                onMouseEnter={e => (e.currentTarget.style.background = '#faf9fe')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                <td style={{ padding: '11px 12px', borderBottom: '1px solid #f0f0f0', fontWeight: 600, color: '#1b1b1b' }}>
-                  {a.name}
-                  {a.investment_category && (
-                    <span style={{ fontSize: 10, marginLeft: 6, padding: '1px 6px', borderRadius: 10, background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>
-                      🔄 {a.investment_category}
-                    </span>
-                  )}
-                </td>
-                <td style={{ padding: '11px 12px', borderBottom: '1px solid #f0f0f0' }}><Badge variant="purple">{a.asset_type}</Badge></td>
-                <td style={{ padding: '11px 12px', borderBottom: '1px solid #f0f0f0' }}>
-                  {getEffectiveAmount(a).toLocaleString()}
-                  <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: '#f0f0f0', color: CCY_COLORS[a.currency] || '#888', marginLeft: 4 }}>{a.currency}</span>
-                </td>
-                <td style={{ padding: '11px 12px', borderBottom: '1px solid #f0f0f0', color: '#6c4fa3', fontWeight: 600 }}>
-                  ¥{Math.round(toJPY(getEffectiveAmount(a), a.currency)).toLocaleString()}
-                </td>
-                <td style={{ padding: '11px 12px', borderBottom: '1px solid #f0f0f0', fontSize: 12 }}>
-                  {a.investment_category
-                    ? <span style={{ color: '#16a34a' }}>🔄 实时同步</span>
-                    : <span style={{ color: '#aaa' }}>{a.updated_at ? dayjs(a.updated_at).format('MM-DD HH:mm') : '—'}</span>
-                  }
-                </td>
-                <td style={{ padding: '11px 12px', borderBottom: '1px solid #f0f0f0' }}>
-                  <span onClick={async (e) => { e.stopPropagation(); if (confirm('删除？')) { await deleteAsset(a.id); load() } }}
-                    style={{ color: '#e63946', cursor: 'pointer', fontSize: 12 }}>删除</span>
-                </td>
-              </tr>
-            ))}
-            {assets.length === 0 && <tr><td colSpan={6} style={{ textAlign: 'center', padding: 30, color: '#aaa' }}>暂无资产记录</td></tr>}
-          </tbody>
-        </table>
+        {assets.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: 30, color: '#aaa' }}>暂无资产记录</div>
+        ) : (
+          (['JPY', 'USD', 'CNY'] as const).map(ccy => {
+            const group = assets.filter(a => a.currency === ccy)
+            if (group.length === 0) return null
+            const CCY_LABEL: Record<string, string> = { JPY: '🇯🇵 日元', USD: '🇺🇸 美元', CNY: '🇨🇳 人民币' }
+            return (
+              <div key={ccy} style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: CCY_COLORS[ccy] || '#888', padding: '6px 12px', background: '#f9f8ff', borderRadius: 6, marginBottom: 4 }}>
+                  {CCY_LABEL[ccy]}
+                </div>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <thead>
+                    <tr>{['资产名称', '类型', '金额', '折合日元', '最后修改', '操作'].map(h =>
+                      <th key={h} style={{ textAlign: 'left', padding: '6px 12px', fontSize: 11, color: '#bbb', borderBottom: '1px solid #f0f0f0' }}>{h}</th>
+                    )}</tr>
+                  </thead>
+                  <tbody>
+                    {group.map(a => (
+                      <tr key={a.id} onClick={() => openEdit(a)} style={{ cursor: 'pointer' }}
+                        onMouseEnter={e => (e.currentTarget.style.background = '#faf9fe')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                        <td style={{ padding: '11px 12px', borderBottom: '1px solid #f0f0f0', fontWeight: 600, color: '#1b1b1b' }}>
+                          {a.name}
+                          {a.investment_category && (
+                            <span style={{ fontSize: 10, marginLeft: 6, padding: '1px 6px', borderRadius: 10, background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>
+                              🔄 {a.investment_category}
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ padding: '11px 12px', borderBottom: '1px solid #f0f0f0' }}><Badge variant="purple">{a.asset_type}</Badge></td>
+                        <td style={{ padding: '11px 12px', borderBottom: '1px solid #f0f0f0' }}>
+                          {getEffectiveAmount(a).toLocaleString()}
+                          <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: '#f0f0f0', color: CCY_COLORS[ccy] || '#888', marginLeft: 4 }}>{ccy}</span>
+                        </td>
+                        <td style={{ padding: '11px 12px', borderBottom: '1px solid #f0f0f0', color: '#6c4fa3', fontWeight: 600 }}>
+                          ¥{Math.round(toJPY(getEffectiveAmount(a), ccy)).toLocaleString()}
+                        </td>
+                        <td style={{ padding: '11px 12px', borderBottom: '1px solid #f0f0f0', fontSize: 12 }}>
+                          {a.investment_category
+                            ? <span style={{ color: '#16a34a' }}>🔄 实时同步</span>
+                            : <span style={{ color: '#aaa' }}>{a.updated_at ? dayjs(a.updated_at).format('MM-DD HH:mm') : '—'}</span>
+                          }
+                        </td>
+                        <td style={{ padding: '11px 12px', borderBottom: '1px solid #f0f0f0' }}>
+                          <span onClick={async (e) => { e.stopPropagation(); if (confirm('删除？')) { await deleteAsset(a.id); load() } }}
+                            style={{ color: '#e63946', cursor: 'pointer', fontSize: 12 }}>删除</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          })
+        )}
       </Card>
 
       {showModal && (

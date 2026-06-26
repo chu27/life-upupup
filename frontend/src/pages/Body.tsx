@@ -3,8 +3,14 @@ import dayjs from 'dayjs'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import Card, { CardTitle } from '../components/Card'
 import Button from '../components/Button'
-import Modal, { FormRow, Input, ModalFooter } from '../components/Modal'
-import { getBodyRecords, getLatestBody, upsertBody, deleteBody } from '../api'
+import Modal, { FormRow, Input, Select, ModalFooter } from '../components/Modal'
+import { getBodyRecords, getLatestBody, upsertBody, deleteBody, getWorkouts, createWorkout, deleteWorkout } from '../api'
+
+const WORKOUT_TYPES = ['跑步', '力量训练', '瑜伽', '游泳', '骑行', '球类运动', '健走', '拉伸', '其他']
+const WORKOUT_ICON: Record<string, string> = {
+  '跑步': '🏃', '力量训练': '🏋️', '瑜伽': '🧘', '游泳': '🏊',
+  '骑行': '🚴', '球类运动': '⚽', '健走': '🚶', '拉伸': '🤸', '其他': '💪',
+}
 
 const FIELDS = [
   { key: 'weight', label: '体重', unit: 'kg' },
@@ -22,11 +28,37 @@ export default function Body() {
   const [form, setForm] = useState<any>({ date: dayjs().format('YYYY-MM-DD'), weight: '', waist: '', chest: '', hip: '', arm: '', leg: '' })
   const [range, setRange] = useState(30)
 
+  const [workouts, setWorkouts] = useState<any[]>([])
+  const [showWorkoutModal, setShowWorkoutModal] = useState(false)
+  const [wForm, setWForm] = useState({ date: dayjs().format('YYYY-MM-DD'), workout_type: '跑步', duration_minutes: '', notes: '' })
+
   const load = () => {
     getBodyRecords().then(setRecords)
     getLatestBody().then(setLatest)
+    getWorkouts().then(setWorkouts)
   }
   useEffect(() => { load() }, [])
+
+  const handleSaveWorkout = async () => {
+    await createWorkout({
+      ...wForm,
+      duration_minutes: wForm.duration_minutes ? Number(wForm.duration_minutes) : null,
+    })
+    setShowWorkoutModal(false)
+    load()
+  }
+
+  // 本月打卡天数 & 连续打卡
+  const today = dayjs().format('YYYY-MM-DD')
+  const thisMonth = dayjs().format('YYYY-MM')
+  const monthDates = new Set(workouts.filter(w => w.date.startsWith(thisMonth)).map(w => w.date))
+  const monthCount = monthDates.size
+  let streak = 0
+  for (let i = 0; ; i++) {
+    const d = dayjs().subtract(i, 'day').format('YYYY-MM-DD')
+    if (monthDates.has(d) || workouts.some(w => w.date === d)) streak++
+    else break
+  }
 
   const chartData = records.slice(0, range).reverse().map(r => ({
     date: dayjs(r.date).format('M/D'),
@@ -63,6 +95,71 @@ export default function Body() {
           </div>
         </Card>
       )}
+
+      {/* 锻炼打卡 */}
+      <Card>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <CardTitle>💪 锻炼打卡</CardTitle>
+          <Button onClick={() => { setWForm({ date: today, workout_type: '跑步', duration_minutes: '', notes: '' }); setShowWorkoutModal(true) }}>+ 打卡</Button>
+        </div>
+
+        {/* 统计数字 */}
+        <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 28, fontWeight: 700, color: '#6c4fa3' }}>{streak}</div>
+            <div style={{ fontSize: 11, color: '#999' }}>连续天数</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 28, fontWeight: 700, color: '#6c4fa3' }}>{monthCount}</div>
+            <div style={{ fontSize: 11, color: '#999' }}>本月打卡</div>
+          </div>
+        </div>
+
+        {/* 本月日历 */}
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 12, color: '#aaa', marginBottom: 8 }}>{dayjs().format('YYYY年M月')} 打卡日历</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            {Array.from({ length: dayjs().daysInMonth() }, (_, i) => {
+              const d = dayjs().startOf('month').add(i, 'day').format('YYYY-MM-DD')
+              const done = workouts.some(w => w.date === d)
+              const isToday = d === today
+              return (
+                <div key={d} style={{
+                  width: 28, height: 28, borderRadius: 6, fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: done ? '#6c4fa3' : isToday ? '#ede8f7' : '#f5f5f5',
+                  color: done ? '#fff' : isToday ? '#6c4fa3' : '#bbb',
+                  fontWeight: isToday ? 700 : 400,
+                  border: isToday && !done ? '1.5px solid #6c4fa3' : 'none',
+                }}>{i + 1}</div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* 最近记录 */}
+        {workouts.length > 0 && (
+          <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 10 }}>
+            <div style={{ fontSize: 12, color: '#aaa', marginBottom: 6 }}>最近记录</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {workouts.slice(0, 8).map(w => (
+                <div key={w.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 16 }}>{WORKOUT_ICON[w.workout_type] || '💪'}</span>
+                    <span style={{ fontWeight: 600 }}>{w.workout_type}</span>
+                    {w.duration_minutes && <span style={{ color: '#888', fontSize: 12 }}>{w.duration_minutes} 分钟</span>}
+                    {w.notes && <span style={{ color: '#aaa', fontSize: 12 }}>· {w.notes}</span>}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ color: '#bbb', fontSize: 12 }}>{w.date}</span>
+                    <span onClick={async () => { if (confirm('删除这条打卡？')) { await deleteWorkout(w.id); load() } }}
+                      style={{ color: '#e63946', cursor: 'pointer', fontSize: 12 }}>删除</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </Card>
 
       {/* Weight chart */}
       <Card>
@@ -117,6 +214,23 @@ export default function Body() {
           </tbody>
         </table>
       </Card>
+
+      {showWorkoutModal && (
+        <Modal title="锻炼打卡" onClose={() => setShowWorkoutModal(false)}>
+          <FormRow label="日期"><Input type="date" value={wForm.date} onChange={v => setWForm(f => ({ ...f, date: v }))} /></FormRow>
+          <FormRow label="运动类型">
+            <Select value={wForm.workout_type} onChange={v => setWForm(f => ({ ...f, workout_type: v }))}
+              options={WORKOUT_TYPES.map(t => ({ label: `${WORKOUT_ICON[t]} ${t}`, value: t }))} />
+          </FormRow>
+          <FormRow label="时长（分钟）">
+            <Input type="number" value={wForm.duration_minutes} onChange={v => setWForm(f => ({ ...f, duration_minutes: v }))} placeholder="选填，如：45" />
+          </FormRow>
+          <FormRow label="备注">
+            <Input value={wForm.notes} onChange={v => setWForm(f => ({ ...f, notes: v }))} placeholder="选填，如：跑了5公里" />
+          </FormRow>
+          <ModalFooter onClose={() => setShowWorkoutModal(false)} onSubmit={handleSaveWorkout} />
+        </Modal>
+      )}
 
       {showModal && (
         <Modal title="记录身体数据" onClose={() => setShowModal(false)}>

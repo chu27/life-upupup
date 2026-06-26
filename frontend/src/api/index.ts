@@ -22,6 +22,9 @@ export const getBodyRecords = () => api.get('/body').then(r => r.data)
 export const getLatestBody = () => api.get('/body/latest').then(r => r.data)
 export const upsertBody = (data: any) => api.post('/body', data).then(r => r.data)
 export const deleteBody = (id: number) => api.delete(`/body/${id}`)
+export const getWorkouts = () => api.get('/body/workouts').then(r => r.data)
+export const createWorkout = (data: any) => api.post('/body/workouts', data).then(r => r.data)
+export const deleteWorkout = (id: number) => api.delete(`/body/workouts/${id}`)
 
 // ── Finance ────────────────────────────────────────────
 export const getTransactions = (params?: any) => api.get('/finance/transactions', { params }).then(r => r.data)
@@ -68,6 +71,21 @@ export const createStudyGoal = (data: any) => api.post('/language/goals', data).
 export const getResources = (language: string) => api.get(`/language/${language}/resources`).then(r => r.data)
 export const createResource = (data: any) => api.post('/language/resources', data).then(r => r.data)
 export const deleteResource = (id: number) => api.delete(`/language/resources/${id}`)
+// 语法
+export const getGrammar = (language: string) => api.get(`/language/${language}/grammar`).then(r => r.data)
+export const createGrammar = (data: any) => api.post('/language/grammar', data).then(r => r.data)
+export const updateGrammar = (id: number, data: any) => api.put(`/language/grammar/${id}`, data).then(r => r.data)
+export const deleteGrammar = (id: number) => api.delete(`/language/grammar/${id}`)
+// 单词
+export const getVocab = (language: string) => api.get(`/language/${language}/vocab`).then(r => r.data)
+export const createVocab = (data: any) => api.post('/language/vocab', data).then(r => r.data)
+export const updateVocab = (id: number, data: any) => api.put(`/language/vocab/${id}`, data).then(r => r.data)
+export const deleteVocab = (id: number) => api.delete(`/language/vocab/${id}`)
+// 句子
+export const getSentences = (language: string) => api.get(`/language/${language}/sentences`).then(r => r.data)
+export const createSentence = (data: any) => api.post('/language/sentences', data).then(r => r.data)
+export const updateSentence = (id: number, data: any) => api.put(`/language/sentences/${id}`, data).then(r => r.data)
+export const deleteSentence = (id: number) => api.delete(`/language/sentences/${id}`)
 
 // ── Diet ───────────────────────────────────────────────
 export const getMeals = (date?: string) => api.get('/diet/meals', { params: date ? { date } : {} }).then(r => r.data)

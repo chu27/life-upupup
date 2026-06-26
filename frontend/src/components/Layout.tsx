@@ -3,6 +3,34 @@ import { NavLink } from 'react-router-dom'
 import { useLanguages } from '../App'
 import { addLanguage, deleteLanguage } from '../api'
 
+const LANG_LOOKUP: Record<string, { code: string; emoji: string }> = {
+  '日语': { code: 'japanese', emoji: '🇯🇵' },
+  '英语': { code: 'english', emoji: '🇬🇧' },
+  '中文': { code: 'chinese', emoji: '🇨🇳' },
+  '普通话': { code: 'mandarin', emoji: '🇨🇳' },
+  '粤语': { code: 'cantonese', emoji: '🇭🇰' },
+  '韩语': { code: 'korean', emoji: '🇰🇷' },
+  '法语': { code: 'french', emoji: '🇫🇷' },
+  '德语': { code: 'german', emoji: '🇩🇪' },
+  '西班牙语': { code: 'spanish', emoji: '🇪🇸' },
+  '葡萄牙语': { code: 'portuguese', emoji: '🇵🇹' },
+  '意大利语': { code: 'italian', emoji: '🇮🇹' },
+  '俄语': { code: 'russian', emoji: '🇷🇺' },
+  '阿拉伯语': { code: 'arabic', emoji: '🇸🇦' },
+  '泰语': { code: 'thai', emoji: '🇹🇭' },
+  '越南语': { code: 'vietnamese', emoji: '🇻🇳' },
+  '印尼语': { code: 'indonesian', emoji: '🇮🇩' },
+  '马来语': { code: 'malay', emoji: '🇲🇾' },
+  '荷兰语': { code: 'dutch', emoji: '🇳🇱' },
+  '瑞典语': { code: 'swedish', emoji: '🇸🇪' },
+  '波兰语': { code: 'polish', emoji: '🇵🇱' },
+  '土耳其语': { code: 'turkish', emoji: '🇹🇷' },
+  '希腊语': { code: 'greek', emoji: '🇬🇷' },
+  '希伯来语': { code: 'hebrew', emoji: '🇮🇱' },
+  '印地语': { code: 'hindi', emoji: '🇮🇳' },
+  '斯瓦希里语': { code: 'swahili', emoji: '🇰🇪' },
+}
+
 const staticNav = [
   { group: '', items: [
     { to: '/', icon: '🏠', label: '首页' },
@@ -50,9 +78,20 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [managing, setManaging] = useState(false)
   const [investCollapsed, setInvestCollapsed] = useState(false)
 
+  const handleNameChange = (name: string) => {
+    const hit = LANG_LOOKUP[name.trim()]
+    setForm(f => ({
+      ...f,
+      name,
+      code: hit ? hit.code : f.code,
+      emoji: hit ? hit.emoji : f.emoji,
+    }))
+  }
+
   const handleAdd = async () => {
-    if (!form.name.trim() || !form.code.trim()) return
-    await addLanguage({ name: form.name.trim(), code: form.code.trim(), emoji: form.emoji.trim() || null })
+    if (!form.name.trim()) return
+    const code = form.code.trim() || form.name.trim().toLowerCase().replace(/\s+/g, '_')
+    await addLanguage({ name: form.name.trim(), code, emoji: form.emoji.trim() || null })
     setForm({ name: '', code: '', emoji: '' })
     setShowAdd(false)
     reload()
@@ -130,7 +169,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <NavLink to={`/language/${lang.code}`}
                   style={({ isActive }) => ({ ...navLinkStyle(isActive), flex: 1 })}>
                   <span style={{ width: 18, textAlign: 'center' }}>{lang.emoji || '🌐'}</span>
-                  {lang.name}学习
+                  {lang.name}
                 </NavLink>
                 {managing && (
                   <span onClick={() => handleDelete(lang.id, lang.name)}
@@ -149,11 +188,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
             {showAdd && (
               <div style={{ padding: '8px 12px', background: '#f5f3fa', margin: '4px 8px', borderRadius: 8 }}>
-                <input placeholder="语言名称（如：法语）" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                <input placeholder="语言名称（如：法语）" value={form.name} onChange={e => handleNameChange(e.target.value)}
                   style={{ width: '100%', padding: '5px 8px', fontSize: 12, border: '1px solid #e4dff0', borderRadius: 6, marginBottom: 4, boxSizing: 'border-box', outline: 'none' }} />
+                {form.emoji && form.code && (
+                  <div style={{ fontSize: 11, color: '#6c4fa3', background: '#ede8f7', borderRadius: 5, padding: '3px 8px', marginBottom: 4 }}>
+                    自动识别：{form.emoji} {form.name}（{form.code}）
+                  </div>
+                )}
                 <input placeholder="代码（如：french）" value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))}
                   style={{ width: '100%', padding: '5px 8px', fontSize: 12, border: '1px solid #e4dff0', borderRadius: 6, marginBottom: 4, boxSizing: 'border-box', outline: 'none' }} />
-                <input placeholder="Emoji（如：🇫🇷）" value={form.emoji} onChange={e => setForm(f => ({ ...f, emoji: e.target.value }))}
+                <input placeholder="国旗 Emoji（如：🇫🇷）" value={form.emoji} onChange={e => setForm(f => ({ ...f, emoji: e.target.value }))}
                   style={{ width: '100%', padding: '5px 8px', fontSize: 12, border: '1px solid #e4dff0', borderRadius: 6, marginBottom: 6, boxSizing: 'border-box', outline: 'none' }} />
                 <div style={{ display: 'flex', gap: 6 }}>
                   <button onClick={handleAdd} style={{ flex: 1, padding: '5px', background: '#6c4fa3', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>确认</button>

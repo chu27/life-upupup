@@ -6,7 +6,7 @@ from typing import Optional
 from datetime import date
 
 from database import get_db
-from models.language import StudyCheckin, StudyGoal, StudyResource, UserLanguage
+from models.language import StudyCheckin, StudyGoal, StudyResource, UserLanguage, GrammarEntry, VocabEntry, SentenceEntry
 
 router = APIRouter(prefix="/api/language", tags=["language"])
 
@@ -154,5 +154,141 @@ def delete_resource(resource_id: int, db: Session = Depends(get_db)):
     if not resource:
         raise HTTPException(status_code=404, detail="Not found")
     db.delete(resource)
+    db.commit()
+    return {"ok": True}
+
+
+# ── 语法 ──────────────────────────────────────────────
+class GrammarCreate(BaseModel):
+    language: str
+    title: str
+    explanation: Optional[str] = None
+    example: Optional[str] = None
+    mastery: int = 0
+
+
+@router.get("/{language}/grammar")
+def list_grammar(language: str, db: Session = Depends(get_db)):
+    return db.query(GrammarEntry).filter(GrammarEntry.language == language).order_by(desc(GrammarEntry.id)).all()
+
+
+@router.post("/grammar")
+def create_grammar(data: GrammarCreate, db: Session = Depends(get_db)):
+    entry = GrammarEntry(**data.dict())
+    db.add(entry)
+    db.commit()
+    db.refresh(entry)
+    return entry
+
+
+@router.put("/grammar/{entry_id}")
+def update_grammar(entry_id: int, data: GrammarCreate, db: Session = Depends(get_db)):
+    entry = db.query(GrammarEntry).filter(GrammarEntry.id == entry_id).first()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Not found")
+    for field, value in data.dict().items():
+        setattr(entry, field, value)
+    db.commit()
+    db.refresh(entry)
+    return entry
+
+
+@router.delete("/grammar/{entry_id}")
+def delete_grammar(entry_id: int, db: Session = Depends(get_db)):
+    entry = db.query(GrammarEntry).filter(GrammarEntry.id == entry_id).first()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Not found")
+    db.delete(entry)
+    db.commit()
+    return {"ok": True}
+
+
+# ── 单词 ──────────────────────────────────────────────
+class VocabCreate(BaseModel):
+    language: str
+    word: str
+    reading: Optional[str] = None
+    meaning: Optional[str] = None
+    example: Optional[str] = None
+    mastery: int = 0
+
+
+@router.get("/{language}/vocab")
+def list_vocab(language: str, db: Session = Depends(get_db)):
+    return db.query(VocabEntry).filter(VocabEntry.language == language).order_by(desc(VocabEntry.id)).all()
+
+
+@router.post("/vocab")
+def create_vocab(data: VocabCreate, db: Session = Depends(get_db)):
+    entry = VocabEntry(**data.dict())
+    db.add(entry)
+    db.commit()
+    db.refresh(entry)
+    return entry
+
+
+@router.put("/vocab/{entry_id}")
+def update_vocab(entry_id: int, data: VocabCreate, db: Session = Depends(get_db)):
+    entry = db.query(VocabEntry).filter(VocabEntry.id == entry_id).first()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Not found")
+    for field, value in data.dict().items():
+        setattr(entry, field, value)
+    db.commit()
+    db.refresh(entry)
+    return entry
+
+
+@router.delete("/vocab/{entry_id}")
+def delete_vocab(entry_id: int, db: Session = Depends(get_db)):
+    entry = db.query(VocabEntry).filter(VocabEntry.id == entry_id).first()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Not found")
+    db.delete(entry)
+    db.commit()
+    return {"ok": True}
+
+
+# ── 句子 ──────────────────────────────────────────────
+class SentenceCreate(BaseModel):
+    language: str
+    sentence: str
+    meaning: Optional[str] = None
+    notes: Optional[str] = None
+    mastery: int = 0
+
+
+@router.get("/{language}/sentences")
+def list_sentences(language: str, db: Session = Depends(get_db)):
+    return db.query(SentenceEntry).filter(SentenceEntry.language == language).order_by(desc(SentenceEntry.id)).all()
+
+
+@router.post("/sentences")
+def create_sentence(data: SentenceCreate, db: Session = Depends(get_db)):
+    entry = SentenceEntry(**data.dict())
+    db.add(entry)
+    db.commit()
+    db.refresh(entry)
+    return entry
+
+
+@router.put("/sentences/{entry_id}")
+def update_sentence(entry_id: int, data: SentenceCreate, db: Session = Depends(get_db)):
+    entry = db.query(SentenceEntry).filter(SentenceEntry.id == entry_id).first()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Not found")
+    for field, value in data.dict().items():
+        setattr(entry, field, value)
+    db.commit()
+    db.refresh(entry)
+    return entry
+
+
+@router.delete("/sentences/{entry_id}")
+def delete_sentence(entry_id: int, db: Session = Depends(get_db)):
+    entry = db.query(SentenceEntry).filter(SentenceEntry.id == entry_id).first()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Not found")
+    db.delete(entry)
     db.commit()
     return {"ok": True}

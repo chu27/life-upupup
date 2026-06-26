@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import dayjs, { Dayjs } from 'dayjs'
 import isoWeek from 'dayjs/plugin/isoWeek'
 import Card from '../components/Card'
@@ -7,7 +7,18 @@ import { getTasks, createTask, updateTask, toggleTask, deleteTask } from '../api
 
 dayjs.extend(isoWeek)
 
-const MODULE_TAGS = ['📚 读书', '🎬 纪录片', '⚖️ 身材', '🥗 饮食', '💰 理财', '📈 股票', '🇯🇵 日语', '🇬🇧 英语', '💧 饮水']
+const TAGS_KEY = 'module_tags'
+const DEFAULT_TAGS = ['📚 读书', '🎬 纪录片', '⚖️ 身材', '🥗 饮食', '💰 理财', '📈 股票', '🇯🇵 日语', '🇬🇧 英语', '💧 饮水']
+
+function loadTags(): string[] {
+  try {
+    const s = localStorage.getItem(TAGS_KEY)
+    return s ? JSON.parse(s) : DEFAULT_TAGS
+  } catch { return DEFAULT_TAGS }
+}
+function saveTags(tags: string[]) {
+  localStorage.setItem(TAGS_KEY, JSON.stringify(tags))
+}
 
 type Period = 'today' | 'week' | 'month' | 'year'
 
@@ -76,6 +87,27 @@ export default function Tasks({ period }: { period: Period }) {
   const [editTitle, setEditTitle] = useState('')
   const [editTag, setEditTag] = useState('')
 
+  const [moduleTags, setModuleTags] = useState<string[]>(loadTags)
+  const [showTagMgr, setShowTagMgr] = useState(false)
+  const [newTagInput, setNewTagInput] = useState('')
+  const [editTagIdx, setEditTagIdx] = useState<number | null>(null)
+  const [editTagVal, setEditTagVal] = useState('')
+
+  const updateTags = (tags: string[]) => { setModuleTags(tags); saveTags(tags) }
+  const addTag = () => {
+    const v = newTagInput.trim()
+    if (!v || moduleTags.includes(v)) return
+    updateTags([...moduleTags, v])
+    setNewTagInput('')
+  }
+  const deleteTag = (i: number) => updateTags(moduleTags.filter((_, idx) => idx !== i))
+  const saveEditTag = (i: number) => {
+    const v = editTagVal.trim()
+    if (!v) return
+    const next = [...moduleTags]; next[i] = v
+    updateTags(next); setEditTagIdx(null)
+  }
+
   // 切换 period 时重置到当前时间
   useEffect(() => { setAnchor(dayjs()) }, [period])
 
@@ -110,6 +142,7 @@ export default function Tasks({ period }: { period: Period }) {
 
   const done = tasks.filter(t => t.is_done).length
   const [prevLabel, nextLabel] = navLabel[period]
+  const pickerRef = useRef<HTMLInputElement>(null)
 
   return (
     <div>
@@ -130,8 +163,31 @@ export default function Tasks({ period }: { period: Period }) {
           background: '#f5f3fa', fontSize: 13, cursor: 'pointer', color: '#555',
         }}>← {prevLabel}</button>
 
-        <div style={{ flex: 1, textAlign: 'center' }}>
+        <div style={{ flex: 1, textAlign: 'center', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 15, fontWeight: 600, color: '#1b1b1b' }}>{info.label}</span>
+          <span onClick={() => pickerRef.current?.showPicker?.() ?? pickerRef.current?.click()}
+            style={{ fontSize: 14, cursor: 'pointer', userSelect: 'none' }} title="跳转到指定日期">📅</span>
+          {period === 'today' && (
+            <input ref={pickerRef} type="date" value={anchor.format('YYYY-MM-DD')}
+              onChange={e => e.target.value && setAnchor(dayjs(e.target.value))}
+              style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }} />
+          )}
+          {period === 'week' && (
+            <input ref={pickerRef} type="week"
+              value={anchor.format('YYYY-[W]') + String(anchor.isoWeek()).padStart(2, '0')}
+              onChange={e => { if (e.target.value) { const [y, w] = e.target.value.split('-W'); setAnchor(dayjs().year(Number(y)).isoWeek(Number(w)).startOf('isoWeek')) } }}
+              style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }} />
+          )}
+          {period === 'month' && (
+            <input ref={pickerRef} type="month" value={anchor.format('YYYY-MM')}
+              onChange={e => e.target.value && setAnchor(dayjs(e.target.value + '-01'))}
+              style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }} />
+          )}
+          {period === 'year' && (
+            <input ref={pickerRef} type="number" value={anchor.year()} min={2000} max={2099}
+              onChange={e => e.target.value && setAnchor(anchor.year(Number(e.target.value)))}
+              style={{ width: 70, padding: '4px 8px', border: '1.5px solid #e4dff0', borderRadius: 8, fontSize: 13, textAlign: 'center', outline: 'none' }} />
+          )}
         </div>
 
         {!info.isToday && (
@@ -158,7 +214,7 @@ export default function Tasks({ period }: { period: Period }) {
         </div>
 
         {/* Add row */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: showTagMgr ? 8 : 16 }}>
           <input
             value={newTitle} onChange={e => setNewTitle(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleAdd()}
@@ -168,10 +224,51 @@ export default function Tasks({ period }: { period: Period }) {
           <select value={newTag} onChange={e => setNewTag(e.target.value)}
             style={{ padding: '8px 10px', border: '1.5px solid #e4dff0', borderRadius: 8, fontSize: 12, background: '#f5f3fa', outline: 'none' }}>
             <option value="">模块标签</option>
-            {MODULE_TAGS.map(tag => <option key={tag} value={tag}>{tag}</option>)}
+            {moduleTags.map(tag => <option key={tag} value={tag}>{tag}</option>)}
           </select>
+          <button onClick={() => setShowTagMgr(v => !v)} style={{
+            padding: '8px 12px', border: '1.5px solid #e4dff0', borderRadius: 8,
+            fontSize: 12, background: showTagMgr ? '#ede8f7' : '#f5f3fa',
+            color: showTagMgr ? '#6c4fa3' : '#888', cursor: 'pointer',
+          }}>管理标签</button>
           <Button onClick={handleAdd} size="md">+ 添加</Button>
         </div>
+
+        {/* Tag manager */}
+        {showTagMgr && (
+          <div style={{ background: '#f5f3fa', border: '1.5px solid #e4dff0', borderRadius: 10, padding: '12px 14px', marginBottom: 16 }}>
+            <div style={{ fontSize: 12, color: '#888', fontWeight: 600, marginBottom: 10 }}>标签管理</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
+              {moduleTags.map((tag, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {editTagIdx === i ? (
+                    <>
+                      <input value={editTagVal} onChange={e => setEditTagVal(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && saveEditTag(i)}
+                        autoFocus
+                        style={{ flex: 1, padding: '4px 8px', border: '1.5px solid #6c4fa3', borderRadius: 6, fontSize: 12, outline: 'none' }} />
+                      <button onClick={() => saveEditTag(i)} style={{ padding: '4px 10px', background: '#6c4fa3', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>保存</button>
+                      <button onClick={() => setEditTagIdx(null)} style={{ padding: '4px 8px', background: '#eee', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>取消</button>
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ flex: 1, fontSize: 13, padding: '3px 8px', background: '#ede8f7', color: '#6c4fa3', borderRadius: 20, display: 'inline-block' }}>{tag}</span>
+                      <button onClick={() => { setEditTagIdx(i); setEditTagVal(tag) }} style={{ padding: '3px 8px', background: '#fff', border: '1px solid #e4dff0', borderRadius: 6, fontSize: 12, cursor: 'pointer', color: '#666' }}>改</button>
+                      <button onClick={() => deleteTag(i)} style={{ padding: '3px 8px', background: '#fff', border: '1px solid #fcc', borderRadius: 6, fontSize: 12, cursor: 'pointer', color: '#e63946' }}>删</button>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input value={newTagInput} onChange={e => setNewTagInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && addTag()}
+                placeholder="新标签，如：🏃 运动"
+                style={{ flex: 1, padding: '6px 10px', border: '1.5px solid #e4dff0', borderRadius: 7, fontSize: 12, outline: 'none' }} />
+              <button onClick={addTag} style={{ padding: '6px 14px', background: '#6c4fa3', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, cursor: 'pointer' }}>+ 新增</button>
+            </div>
+          </div>
+        )}
 
         {/* Task list */}
         {tasks.map(t => (
@@ -187,7 +284,7 @@ export default function Tasks({ period }: { period: Period }) {
                 <select value={editTag} onChange={e => setEditTag(e.target.value)}
                   style={{ padding: '6px 8px', border: '1.5px solid #e4dff0', borderRadius: 7, fontSize: 12, background: '#f5f3fa', outline: 'none' }}>
                   <option value="">无标签</option>
-                  {MODULE_TAGS.map(tag => <option key={tag} value={tag}>{tag}</option>)}
+                  {moduleTags.map(tag => <option key={tag} value={tag}>{tag}</option>)}
                 </select>
                 <button onClick={() => saveEdit(t.id)} style={{ padding: '6px 12px', background: '#6c4fa3', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, cursor: 'pointer' }}>保存</button>
                 <button onClick={() => setEditingId(null)} style={{ padding: '6px 10px', background: '#f0f0f0', border: 'none', borderRadius: 7, fontSize: 12, cursor: 'pointer' }}>取消</button>

@@ -26,3 +26,6 @@ npm-debug.log*
 .env
 .env.local
 TODO.md
+
+# 数据库（含个人数据，永不上传）
+*.db

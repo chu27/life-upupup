@@ -177,8 +177,12 @@ export default function Investment({ category }: { category?: string }) {
   useEffect(() => {
     if (chartItemId == null) return
     getInvestmentLogs(chartItemId).then(data => {
-      const sorted = [...data].sort((a: any, b: any) => a.date.localeCompare(b.date))
-      // 计算累计盈亏
+      // 按日期去重，保留每日最新一条（id 最大）
+      const byDate: Record<string, any> = {}
+      data.forEach((log: any) => {
+        if (!byDate[log.date] || log.id > byDate[log.date].id) byDate[log.date] = log
+      })
+      const sorted = Object.values(byDate).sort((a: any, b: any) => a.date.localeCompare(b.date))
       let cum = 0
       const result = sorted.map((log: any, i: number) => {
         const daily = i > 0 ? log.amount - sorted[i - 1].amount - (log.capital_change || 0) : 0
@@ -222,9 +226,13 @@ export default function Investment({ category }: { category?: string }) {
   const hasToday = summary.some(r => r.today != null)
   const isToday = viewDate === today
 
-  // 按货币分组显示
+  // 按持有状态分组：昨日金额为0视为清仓
+  const held = summary.filter(r => r.yesterday == null || r.yesterday !== 0)
+  const cleared = summary.filter(r => r.yesterday === 0)
+
+  // 按货币分组（仅现持有）
   const byCcy: Record<string, any[]> = {}
-  summary.forEach(r => {
+  held.forEach(r => {
     if (!byCcy[r.currency]) byCcy[r.currency] = []
     byCcy[r.currency].push(r)
   })
@@ -376,6 +384,36 @@ export default function Investment({ category }: { category?: string }) {
         <div style={{ textAlign: 'center', padding: '60px 0', color: '#aaa', fontSize: 14 }}>
           还没有投资项，点击右上角「+ 添加投资项」开始记录
         </div>
+      )}
+
+      {/* 清仓区块 */}
+      {cleared.length > 0 && (
+        <Card style={{ marginTop: 8, opacity: 0.75 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: '#888' }}>📦 清仓</span>
+            <span style={{ fontSize: 12, color: '#bbb' }}>（昨日余额为 0）</span>
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr>{['投资项', '备注', '操作'].map(h =>
+                <th key={h} style={{ textAlign: 'left', padding: '6px 10px', fontSize: 11, color: '#bbb', borderBottom: '1px solid #f0f0f0' }}>{h}</th>
+              )}</tr>
+            </thead>
+            <tbody>
+              {cleared.map(row => (
+                <tr key={row.id}>
+                  <td style={{ padding: '10px 10px', borderBottom: '1px solid #f0f0f0', color: '#aaa', fontWeight: 600 }}>{row.name}</td>
+                  <td style={{ padding: '10px 10px', borderBottom: '1px solid #f0f0f0', color: '#ccc', fontSize: 12 }}>{row.notes || '—'}</td>
+                  <td style={{ padding: '10px 10px', borderBottom: '1px solid #f0f0f0' }}>
+                    <span onClick={() => openEditItem(row)} style={{ fontSize: 12, color: '#bbb', cursor: 'pointer', marginRight: 8 }}>编辑</span>
+                    <span onClick={async () => { if (confirm(`删除「${row.name}」及其所有记录？`)) { await deleteInvestmentItem(row.id); load() } }}
+                      style={{ fontSize: 12, color: '#e63946', cursor: 'pointer' }}>删除</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
       )}
 
       {/* 添加/编辑投资项弹窗 */}

@@ -6,7 +6,7 @@ from typing import Optional
 from datetime import date
 
 from database import get_db
-from models.body import BodyRecord
+from models.body import BodyRecord, WorkoutCheckin
 
 router = APIRouter(prefix="/api/body", tags=["body"])
 
@@ -53,5 +53,37 @@ def delete_record(record_id: int, db: Session = Depends(get_db)):
     if not record:
         raise HTTPException(status_code=404, detail="Not found")
     db.delete(record)
+    db.commit()
+    return {"ok": True}
+
+
+# ── 锻炼打卡 ──────────────────────────────────────────
+class WorkoutCreate(BaseModel):
+    date: date
+    workout_type: str
+    duration_minutes: Optional[int] = None
+    notes: Optional[str] = None
+
+
+@router.get("/workouts")
+def list_workouts(db: Session = Depends(get_db)):
+    return db.query(WorkoutCheckin).order_by(desc(WorkoutCheckin.date), desc(WorkoutCheckin.id)).limit(100).all()
+
+
+@router.post("/workouts")
+def create_workout(data: WorkoutCreate, db: Session = Depends(get_db)):
+    w = WorkoutCheckin(**data.dict())
+    db.add(w)
+    db.commit()
+    db.refresh(w)
+    return w
+
+
+@router.delete("/workouts/{workout_id}")
+def delete_workout(workout_id: int, db: Session = Depends(get_db)):
+    w = db.query(WorkoutCheckin).filter(WorkoutCheckin.id == workout_id).first()
+    if not w:
+        raise HTTPException(status_code=404, detail="Not found")
+    db.delete(w)
     db.commit()
     return {"ok": True}
